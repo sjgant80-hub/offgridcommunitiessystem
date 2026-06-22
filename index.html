@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>◊ KCC · Konomi Cube Coin · Community OS</title>
-<meta name="description" content="Konomi Cube Coin · sovereign community OS for off-grid / intentional communities. Members · mutual-credit ledger denominated in KCC · governance · calendar · resource share · skill share. Single HTML PWA. IndexedDB local. Raspberry Pi deployable. MIT.">
+<title>◊ Off-Grid Community System</title>
+<meta name="description" content="Off-Grid Community System · sovereign community OS for off-grid / intentional communities. Members · mutual-credit ledger denominated in community units · governance · calendar · resource share · skill share. Single HTML PWA. IndexedDB local. Raspberry Pi deployable. MIT.">
 <meta name="prime" content="1297">
 <meta name="category" content="institution">
-<link rel="manifest" href='data:application/manifest+json,{"name":"KCC · Community OS","short_name":"KCC","start_url":".","display":"standalone","background_color":"%231a1612","theme_color":"%23c08a3a","description":"Konomi Cube Coin · sovereign community OS","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27><rect width=%2764%27 height=%2764%27 fill=%27%231a1612%27/><text x=%2732%27 y=%2744%27 text-anchor=%27middle%27 font-size=%2740%27 fill=%27%23c08a3a%27 font-family=%27serif%27 font-weight=%27bold%27>◊</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Off-Grid Community System","short_name":"OffGrid","start_url":".","display":"standalone","background_color":"%231a1612","theme_color":"%23c08a3a","description":"Off-Grid Community System · sovereign community OS","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27><rect width=%2764%27 height=%2764%27 fill=%27%231a1612%27/><text x=%2732%27 y=%2744%27 text-anchor=%27middle%27 font-size=%2740%27 fill=%27%23c08a3a%27 font-family=%27serif%27 font-weight=%27bold%27>◊</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
 <style>
 :root {
   --void:#1a1612; --void-2:#231f1a; --ink:#2b2722; --ink-2:#36312a;
@@ -136,7 +136,7 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
 .kcc-balance.pos { color: var(--leaf); border-color: var(--leaf); background: rgba(107,141,74,.08); }
 .kcc-balance.neg { color: var(--rust); border-color: var(--rust); background: rgba(161,74,42,.08); }
 .kcc-balance.zero { color: var(--cream-muted); }
-.kcc-balance::after { content: " KCC"; font-size: 10px; opacity: .7; margin-left: 3px; letter-spacing: .04em; }
+.kcc-balance .unit { font-size: 10px; opacity: .7; margin-left: 3px; letter-spacing: .04em; font-weight: 400; }
 
 /* Members module */
 .member-card {
@@ -307,8 +307,8 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
     <div class="brand" onclick="goTab('home')">
       <div class="mark">◊</div>
       <div>
-        <div class="name">KCC</div>
-        <div class="sub">Community OS · v1</div>
+        <div class="name">Community</div>
+        <div class="sub">Off-Grid OS · v1</div>
       </div>
     </div>
     <div class="community-name" id="commNameLabel">(loading…)</div>
@@ -333,7 +333,7 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
 
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"></div>
-<div class="sov">◊ KCC · sovereign · MIT · IndexedDB local</div>
+<div class="sov">◊ Off-Grid Community System · sovereign · MIT · IndexedDB local</div>
 
 <script>
 'use strict';
@@ -341,7 +341,7 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
 // ════════════════════════════════════════════════════════════════
 // CONST
 // ════════════════════════════════════════════════════════════════
-const DB_NAME = 'kcc_db';
+const DB_NAME = 'offgrid_db';
 const DB_VERSION = 1;
 const ROLES = ['founder','member','visitor','wwoofer'];
 const LEDGER_CATEGORIES = ['hours','goods','service','tool-loan','gift','adjustment'];
@@ -382,8 +382,10 @@ const state = {
   events: new Map(), resources: new Map(), skills: new Map(),
   meta: {
     name: 'Your Community',
+    unit_label: 'credits',
+    unit_label_short: 'credits',
     founded: new Date().toISOString().slice(0, 10),
-    peg_definition: '1 KCC ≈ 1 hour of contributed labour',
+    peg_definition: '1 credit ≈ 1 hour of contributed labour',
     governance_default: 'consensus',
     ledger_floor: -50,
     mesh_url: null,
@@ -399,6 +401,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(t._to); t._to = setTimeout(() => t.className = 'toast', 2400); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function unit() { return state.meta.unit_label_short || 'credits'; }
 function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return iso; return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
 function fmtDateShort(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
 function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -532,7 +535,7 @@ function renderHome(body) {
         <div class="card" style="text-align:center">
           <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Community flow</div>
           <div class="kcc-balance" style="font-size:20px;padding:8px 14px">${totalKcc.toFixed(1)}</div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--cream-muted);margin-top:4px">total KCC circulated</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--cream-muted);margin-top:4px">total ${unit()} circulated</div>
         </div>
         <div class="card" style="text-align:center">
           <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Open proposals</div>
@@ -674,7 +677,7 @@ function renderLedger(body) {
   body.innerHTML = `
     <div class="section-h">
       <h3>Ledger</h3>
-      <span class="sub">${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · denominated in KCC</span>
+      <span class="sub">${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · denominated in community units</span>
       <div class="actions">
         <button class="btn brass" onclick="openLedgerModal()">+ New entry</button>
         <button class="btn sm" onclick="exportLedgerCsv()">⤓ CSV</button>
@@ -683,7 +686,7 @@ function renderLedger(body) {
     ${entries.length === 0 ? `<div class="empty">No ledger entries yet. Record an exchange to start the flow.</div>` :
       renderLedgerTable(entries)}
     <div style="margin-top:18px;padding:14px 16px;background:var(--void-2);border:1px solid var(--line);border-radius:4px;font-size:12px;color:var(--cream-muted);line-height:1.65">
-      <strong style="color:var(--brass)">How the ledger works</strong> · Every exchange is a transfer from one member to another, denominated in KCC. Both parties must confirm before the entry counts toward balances. ${state.meta.peg_definition}. Ledger floor: ${state.meta.ledger_floor} KCC (the lowest balance a member can hold).
+      <strong style="color:var(--brass)">How the ledger works</strong> · Every exchange is a transfer from one member to another, denominated in community units. Both parties must confirm before the entry counts toward balances. ${state.meta.peg_definition}. Ledger floor: ${state.meta.ledger_floor} ${unit()} (the lowest balance a member can hold).
     </div>
   `;
 }
@@ -726,7 +729,7 @@ function openLedgerModal(id) {
       </select></div>
     </div>
     <div class="row-flex">
-      <div class="row" style="flex:1"><label>Amount in KCC</label><input type="number" id="lAmount" value="${l?.amount_kcc || ''}" step="0.5" min="0.5" placeholder="e.g. 3"></div>
+      <div class="row" style="flex:1"><label>Amount</label><input type="number" id="lAmount" value="${l?.amount_kcc || ''}" step="0.5" min="0.5" placeholder="e.g. 3"></div>
       <div class="row" style="flex:1"><label>Category</label><select id="lCat">
         ${LEDGER_CATEGORIES.map(c => `<option value="${c}" ${l?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
       </select></div>
@@ -751,7 +754,7 @@ async function saveLedgerFromModal(id) {
   // ledger floor check (from_id will go more negative)
   const newFromBal = balanceOf(from_id) - amt + (id ? state.ledger.get(id).amount_kcc : 0);
   if (newFromBal < state.meta.ledger_floor) {
-    if (!confirm(`This entry would put ${memberById(from_id).name} at ${newFromBal.toFixed(1)} KCC, below the floor (${state.meta.ledger_floor}). Record anyway?`)) return;
+    if (!confirm(`This entry would put ${memberById(from_id).name} at ${newFromBal.toFixed(1)} ${unit()}, below the floor (${state.meta.ledger_floor}). Record anyway?`)) return;
   }
   const me = currentMember();
   const l = id ? state.ledger.get(id) : makeLedger({ from_id });
@@ -785,7 +788,7 @@ async function confirmDelLedger(id) {
 }
 function exportLedgerCsv() {
   const entries = Array.from(state.ledger.values()).sort((a,b) => b.at.localeCompare(a.at));
-  const rows = [['When','From','To','Amount KCC','Category','Description','Status','Acknowledged by']];
+  const rows = [['When','From','To','Amount','Category','Description','Status','Acknowledged by']];
   for (const l of entries) {
     rows.push([l.at, memberById(l.from_id)?.name || '?', memberById(l.to_id)?.name || '?', l.amount_kcc, l.category, l.description, l.status, l.acknowledged_by.map(id => memberById(id)?.name || id).join('; ')]);
   }
@@ -1163,15 +1166,15 @@ function renderSettings(body) {
       <h4>Community</h4>
       <div class="settings-row"><label>Name</label><div><input type="text" id="setName" value="${esc(state.meta.name)}"></div></div>
       <div class="settings-row"><label>Founded</label><div><input type="date" id="setFounded" value="${esc(state.meta.founded)}"></div></div>
-      <div class="settings-row"><label>KCC peg definition</label><div>
+      <div class="settings-row"><label>Unit peg definition</label><div>
         <input type="text" id="setPeg" value="${esc(state.meta.peg_definition)}">
-        <div class="hint">e.g. "1 KCC ≈ 1 hour of labour" · "1 KCC = 1 kWh contributed" · whatever your community agrees</div>
+        <div class="hint">e.g. "1 credit ≈ 1 hour of labour" · "1 credit = 1 kWh contributed" · whatever your community agrees</div>
       </div></div>
       <div class="settings-row"><label>Default voting method</label><div>
         <select id="setGov">${VOTING_METHODS.map(v => `<option value="${v}" ${state.meta.governance_default === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
         <div class="hint">consensus: 0 blocks + 0 no + ≥1 yes · sociocracy: 0 blocks + ≥1 yes · majority: yes > no · unanimous: all yes</div>
       </div></div>
-      <div class="settings-row"><label>Ledger floor (KCC)</label><div>
+      <div class="settings-row"><label>Ledger floor</label><div>
         <input type="number" id="setFloor" value="${state.meta.ledger_floor}" step="1">
         <div class="hint">Lowest balance a member can hold without community confirmation. Default: -50.</div>
       </div></div>
@@ -1185,7 +1188,7 @@ function renderSettings(body) {
     <div class="settings-section">
       <h4>Backup & data</h4>
       <div class="settings-row"><label>Records</label><div style="font-family:var(--mono);font-size:11px;color:var(--cream-muted);letter-spacing:.04em">${state.members.size} members · ${state.ledger.size} ledger entries · ${state.proposals.size} proposals · ${state.events.size} events · ${state.resources.size} resources · ${state.skills.size} skill offers · ${total} records total</div></div>
-      <div class="settings-row"><label>Export whole community</label><div><button class="btn brass" onclick="exportAll()">⤓ Download JSON backup</button><div class="hint">One file containing everything. Re-importable into any KCC install.</div></div></div>
+      <div class="settings-row"><label>Export whole community</label><div><button class="btn brass" onclick="exportAll()">⤓ Download JSON backup</button><div class="hint">One file containing everything. Re-importable into any install of this seed.</div></div></div>
       <div class="settings-row"><label>Import backup</label><div><input type="file" id="importFile" accept=".json" onchange="importAll(this.files[0])"><div class="hint">Merges into your current community. Existing IDs win.</div></div></div>
       <div class="settings-row"><label>Reset</label><div><button class="btn danger" onclick="wipeAll()">⚠ Reset everything</button><div class="hint">Deletes ALL community data from this browser. Cannot be undone.</div></div></div>
     </div>
@@ -1193,9 +1196,9 @@ function renderSettings(body) {
     <div class="settings-section">
       <h4>About</h4>
       <div style="font-size:12.5px;color:var(--cream-dim);line-height:1.65">
-        KCC v1.0 · Konomi Cube Coin · Community OS · MIT · part of the AI Native Solutions estate.<br>
+        Off-Grid Community System v1.0 · MIT · part of the AI Native Solutions estate.<br>
         Single HTML PWA · IndexedDB local · works offline · save the file and it runs forever.<br>
-        Source: <a href="https://github.com/sjgant80-hub/kcc" target="_blank">github.com/sjgant80-hub/kcc</a> · Estate: <a href="https://www.ai-nativesolutions.com" target="_blank">ai-nativesolutions.com</a>
+        Source: <a href="https://github.com/sjgant80-hub/offgridcommunitiessystem" target="_blank">github.com/sjgant80-hub/offgridcommunitiessystem</a> · Estate: <a href="https://www.ai-nativesolutions.com" target="_blank">ai-nativesolutions.com</a>
       </div>
     </div>
   `;
@@ -1211,7 +1214,7 @@ async function saveSettingsFromModal() {
 }
 async function exportAll() {
   const data = {
-    kcc_version: '1.0', exported_at: now(),
+    ogcs_version: '1.0', kcc_version: '1.0', exported_at: now(),
     meta: state.meta,
     members: Array.from(state.members.values()),
     ledger: Array.from(state.ledger.values()),
@@ -1227,7 +1230,7 @@ async function importAll(file) {
   if (!file) return;
   const txt = await file.text();
   let data; try { data = JSON.parse(txt); } catch (e) { toast('Invalid JSON', 'err'); return; }
-  if (!data.kcc_version) { toast('Not a KCC backup', 'err'); return; }
+  if (!data.ogcs_version && !data.kcc_version) { toast("Not a valid backup", "err"); return; }
   if (!confirm(`Import ${data.members?.length || 0} members, ${data.ledger?.length || 0} ledger entries, ${data.proposals?.length || 0} proposals? Existing IDs will be overwritten.`)) return;
   if (data.meta) state.meta = { ...state.meta, ...data.meta };
   for (const m of data.members || []) { state.members.set(m.id, m); await dbPut('members', m); }
@@ -1269,7 +1272,7 @@ function ymd(d) { return d.toISOString().slice(0, 10); }
     render();
   } catch (e) {
     console.error('boot failed', e);
-    document.body.innerHTML = '<div style="padding:40px;color:#ebe3d2;background:#1a1612;min-height:100vh;font-family:system-ui,sans-serif"><h1 style="color:#c08a3a;font-family:Georgia,serif">KCC could not start</h1><p>' + esc(e.message) + '</p><p>Try: Ctrl+Shift+Delete to clear site data, then reload.</p></div>';
+    document.body.innerHTML = '<div style="padding:40px;color:#ebe3d2;background:#1a1612;min-height:100vh;font-family:system-ui,sans-serif"><h1 style="color:#c08a3a;font-family:Georgia,serif">Off-Grid Community System could not start</h1><p>' + esc(e.message) + '</p><p>Try: Ctrl+Shift+Delete to clear site data, then reload.</p></div>';
   }
 })();
 </script>
