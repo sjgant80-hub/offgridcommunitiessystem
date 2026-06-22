@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>◊ KCC · Konomi Cube Coin · Community OS</title>
+<meta name="description" content="Konomi Cube Coin · sovereign community OS for off-grid / intentional communities. Members · mutual-credit ledger denominated in KCC · governance · calendar · resource share · skill share. Single HTML PWA. IndexedDB local. Raspberry Pi deployable. MIT.">
+<meta name="prime" content="1297">
+<meta name="category" content="institution">
+<link rel="manifest" href='data:application/manifest+json,{"name":"KCC · Community OS","short_name":"KCC","start_url":".","display":"standalone","background_color":"%231a1612","theme_color":"%23c08a3a","description":"Konomi Cube Coin · sovereign community OS","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27><rect width=%2764%27 height=%2764%27 fill=%27%231a1612%27/><text x=%2732%27 y=%2744%27 text-anchor=%27middle%27 font-size=%2740%27 fill=%27%23c08a3a%27 font-family=%27serif%27 font-weight=%27bold%27>◊</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+<style>
+:root {
+  --void:#1a1612; --void-2:#231f1a; --ink:#2b2722; --ink-2:#36312a;
+  --line:#3a342c; --line-soft:#2e2922;
+  --cream:#ebe3d2; --cream-dim:#a89e88; --cream-muted:#736b5a;
+  --brass:#c08a3a; --amber:#e8a83a; --leaf:#6b8d4a; --rust:#a14a2a; --slate:#5a7080;
+  --serif: Georgia, 'Times New Roman', ui-serif, serif;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+}
+html.light {
+  --void:#faf6ec; --void-2:#f1ebd9; --ink:#e6dec8; --ink-2:#dcd2b6;
+  --line:#c9bd9e; --line-soft:#d9cfb3;
+  --cream:#231f1a; --cream-dim:#5a5346; --cream-muted:#857d6a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--void); color: var(--cream); font: 14.5px/1.6 var(--sans);
+  min-height: 100dvh; -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; background: transparent; border: none; color: inherit; }
+input, textarea, select {
+  font-family: inherit; background: var(--ink); border: 1px solid var(--line);
+  color: var(--cream); border-radius: 3px; padding: 8px 11px; outline: none; font-size: 13.5px;
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--brass); }
+a { color: var(--brass); text-decoration: none; }
+a:hover { text-decoration: underline; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brass); }
+
+.app { display: grid; grid-template-rows: 60px 1fr; min-height: 100dvh; }
+
+header.top {
+  background: var(--void-2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; padding: 0 18px; gap: 14px;
+}
+header.top .brand { display: flex; align-items: center; gap: 11px; user-select: none; cursor: pointer; }
+header.top .brand .mark {
+  width: 32px; height: 32px; background: linear-gradient(135deg, var(--brass), var(--amber));
+  border-radius: 5px; display: grid; place-items: center;
+  font-family: var(--serif); font-weight: 700; font-size: 18px; color: var(--void);
+}
+header.top .brand .name { font-family: var(--serif); font-weight: 700; font-size: 16px; line-height: 1; }
+header.top .brand .sub { font-family: var(--mono); font-size: 9px; color: var(--cream-muted); letter-spacing: .14em; text-transform: uppercase; margin-top: 3px; }
+header.top .community-name {
+  margin-left: 8px; font-family: var(--serif); font-style: italic; font-size: 14px;
+  color: var(--cream-dim); padding-left: 14px; border-left: 1px solid var(--line);
+}
+header.top nav.tabs {
+  display: flex; gap: 2px; flex: 1; justify-content: center; flex-wrap: wrap; overflow-x: auto;
+}
+header.top nav.tabs button {
+  padding: 8px 14px; font-size: 13px; color: var(--cream-dim); border-radius: 3px;
+  letter-spacing: .02em; white-space: nowrap; transition: all .12s;
+}
+header.top nav.tabs button:hover { color: var(--cream); background: var(--ink); }
+header.top nav.tabs button.active { color: var(--brass); background: var(--ink); }
+header.top .top-actions { display: flex; gap: 6px; }
+header.top .top-actions button {
+  padding: 6px 11px; font-size: 12px; border: 1px solid var(--line); border-radius: 3px;
+  color: var(--cream-dim);
+}
+header.top .top-actions button:hover { border-color: var(--brass); color: var(--brass); }
+
+main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+/* Common card patterns */
+.hero {
+  background: linear-gradient(135deg, rgba(192,138,58,.08), rgba(107,141,74,.04));
+  border: 1px solid var(--brass); border-radius: 5px;
+  padding: 18px 22px; margin-bottom: 18px;
+}
+.hero h2 { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--brass); margin-bottom: 4px; }
+.hero .lede { font-size: 13px; color: var(--cream-dim); line-height: 1.6; }
+
+.section-h {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin: 18px 0 10px;
+}
+.section-h h3 { font-family: var(--serif); font-size: 17px; font-weight: 700; }
+.section-h .sub { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .1em; text-transform: uppercase; }
+.section-h .actions { margin-left: auto; display: flex; gap: 6px; }
+
+.btn {
+  padding: 7px 14px; border: 1px solid var(--line); border-radius: 3px;
+  font-size: 12px; color: var(--cream-dim); background: var(--ink); font-family: inherit;
+}
+.btn:hover { border-color: var(--brass); color: var(--cream); background: var(--ink-2); }
+.btn.brass { background: var(--brass); color: var(--void); border-color: var(--brass); font-weight: 600; }
+.btn.brass:hover { background: var(--amber); }
+.btn.leaf { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+.btn.leaf:hover { filter: brightness(1.12); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--rust); border-color: var(--rust); }
+.btn.danger:hover { background: var(--rust); color: var(--cream); }
+.btn.sm { padding: 4px 9px; font-size: 11px; }
+
+.card {
+  background: var(--void-2); border: 1px solid var(--line); border-radius: 4px;
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.card.member, .card.row {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;
+}
+
+.grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+.tag {
+  display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 11px;
+  margin: 1px 2px 1px 0; background: var(--ink); color: var(--cream-dim);
+  border: 1px solid var(--line); font-family: var(--mono); letter-spacing: .02em;
+}
+.tag.brass { background: rgba(192,138,58,.16); color: var(--brass); border-color: var(--brass); }
+.tag.leaf { background: rgba(107,141,74,.16); color: var(--leaf); border-color: var(--leaf); }
+.tag.rust { background: rgba(161,74,42,.16); color: var(--rust); border-color: var(--rust); }
+.tag.slate { background: rgba(90,112,128,.16); color: var(--slate); border-color: var(--slate); }
+
+.kcc-balance {
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+  padding: 4px 10px; border-radius: 3px; background: var(--ink); border: 1px solid var(--line);
+}
+.kcc-balance.pos { color: var(--leaf); border-color: var(--leaf); background: rgba(107,141,74,.08); }
+.kcc-balance.neg { color: var(--rust); border-color: var(--rust); background: rgba(161,74,42,.08); }
+.kcc-balance.zero { color: var(--cream-muted); }
+.kcc-balance::after { content: " KCC"; font-size: 10px; opacity: .7; margin-left: 3px; letter-spacing: .04em; }
+
+/* Members module */
+.member-card {
+  background: var(--void-2); border: 1px solid var(--line); border-radius: 4px;
+  padding: 14px 16px; cursor: pointer; transition: border-color .14s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.member-card:hover { border-color: var(--brass); }
+.member-card.is-me { border-color: var(--brass); background: linear-gradient(135deg, rgba(192,138,58,.05), transparent); }
+.member-card .top { display: flex; align-items: center; gap: 10px; }
+.member-card .avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--ink-2);
+  display: grid; place-items: center; font-family: var(--serif); font-weight: 700;
+  font-size: 16px; color: var(--brass); flex-shrink: 0;
+}
+.member-card .name-block { flex: 1; min-width: 0; }
+.member-card .nm { font-weight: 600; font-size: 14.5px; color: var(--cream); }
+.member-card .handle { font-family: var(--mono); font-size: 11px; color: var(--cream-muted); }
+.member-card .role-badge { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.member-card .role-founder { background: var(--brass); color: var(--void); }
+.member-card .role-member  { background: var(--ink-2); color: var(--cream-dim); }
+.member-card .role-visitor { background: var(--slate); color: #fff; }
+.member-card .role-wwoofer { background: var(--leaf); color: #fff; }
+.member-card .tags-row { display: flex; flex-wrap: wrap; gap: 3px; }
+
+/* Ledger module */
+.ledger-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ledger-table th {
+  background: var(--void-2); padding: 8px 11px; text-align: left;
+  border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 10px;
+  color: var(--cream-muted); letter-spacing: .08em; text-transform: uppercase; font-weight: 500;
+}
+.ledger-table td {
+  padding: 9px 11px; border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.ledger-table tr:hover td { background: rgba(255,255,255,.02); }
+.ledger-table .amt { font-family: var(--mono); font-weight: 600; font-size: 13.5px; }
+.ledger-table .amt-out { color: var(--rust); }
+.ledger-table .amt-in { color: var(--leaf); }
+.ledger-table .cat { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 2px; background: var(--ink); border: 1px solid var(--line-soft); color: var(--cream-muted); letter-spacing: .04em; }
+.ledger-table .status-pending { color: var(--amber); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.ledger-table .status-confirmed { color: var(--leaf); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.ledger-table .status-disputed { color: var(--rust); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.ledger-table .ack-btn { padding: 3px 9px; font-size: 11px; border: 1px solid var(--leaf); background: transparent; color: var(--leaf); border-radius: 3px; }
+.ledger-table .ack-btn:hover { background: var(--leaf); color: var(--cream); }
+
+/* Governance module */
+.proposal-card { background: var(--void-2); border: 1px solid var(--line); border-radius: 4px; padding: 16px 18px; margin-bottom: 12px; }
+.proposal-card .ph {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;
+}
+.proposal-card .ph h4 { font-family: var(--serif); font-size: 16px; font-weight: 700; flex: 1; min-width: 200px; }
+.proposal-card .ph .meta { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .04em; }
+.proposal-card .body { font-size: 13.5px; line-height: 1.65; color: var(--cream-dim); margin-bottom: 12px; white-space: pre-wrap; }
+.proposal-card .vote-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.proposal-card .vote-row .vote-btn { padding: 5px 12px; font-size: 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--ink); color: var(--cream-dim); }
+.proposal-card .vote-row .vote-btn:hover { border-color: var(--brass); }
+.proposal-card .vote-row .vote-btn.cast-yes { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+.proposal-card .vote-row .vote-btn.cast-no { background: var(--rust); color: #fff; border-color: var(--rust); }
+.proposal-card .vote-row .vote-btn.cast-abstain { background: var(--ink-2); color: var(--cream-dim); }
+.proposal-card .vote-row .vote-btn.cast-block { background: var(--rust); color: #fff; border-color: var(--rust); }
+.proposal-card .tally { display: flex; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--cream-muted); letter-spacing: .04em; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.proposal-card.passed { border-left: 3px solid var(--leaf); }
+.proposal-card.failed { border-left: 3px solid var(--rust); }
+.proposal-card.withdrawn { border-left: 3px solid var(--cream-muted); opacity: .65; }
+.proposal-card .status-badge { padding: 2px 8px; border-radius: 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.proposal-card .status-open    { background: var(--brass); color: var(--void); }
+.proposal-card .status-passed  { background: var(--leaf); color: #fff; }
+.proposal-card .status-failed  { background: var(--rust); color: #fff; }
+.proposal-card .status-withdrawn { background: var(--cream-muted); color: var(--void); }
+
+/* Calendar module */
+.cal-list-wrap { display: grid; gap: 8px; }
+.event-card {
+  background: var(--void-2); border: 1px solid var(--line); border-radius: 4px;
+  padding: 12px 14px; display: grid; grid-template-columns: 70px 1fr auto; gap: 12px;
+  align-items: center;
+}
+.event-card .when-block { text-align: center; }
+.event-card .when-day { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--brass); line-height: 1; }
+.event-card .when-month { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .08em; text-transform: uppercase; }
+.event-card .when-time { font-family: var(--mono); font-size: 10px; color: var(--cream-dim); margin-top: 3px; }
+.event-card .info-block .title { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+.event-card .info-block .meta { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .04em; }
+.event-card .kind-badge { font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.event-card .k-workday { background: rgba(107,141,74,.18); color: var(--leaf); border: 1px solid var(--leaf); }
+.event-card .k-harvest { background: rgba(192,138,58,.18); color: var(--brass); border: 1px solid var(--brass); }
+.event-card .k-meeting { background: rgba(90,112,128,.18); color: var(--slate); border: 1px solid var(--slate); }
+.event-card .k-market  { background: rgba(232,168,58,.18); color: var(--amber); border: 1px solid var(--amber); }
+.event-card .k-feast   { background: rgba(161,74,42,.18); color: var(--rust); border: 1px solid var(--rust); }
+.event-card .k-other   { background: var(--ink-2); color: var(--cream-dim); border: 1px solid var(--line); }
+
+/* Resources / Skills module */
+.resource-card, .skill-card {
+  background: var(--void-2); border: 1px solid var(--line); border-radius: 4px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.resource-card .top, .skill-card .top { display: flex; align-items: center; gap: 8px; }
+.resource-card .ttl, .skill-card .ttl { font-weight: 600; font-size: 14px; flex: 1; }
+.resource-card .owner, .skill-card .by { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .04em; }
+.resource-card .borrow-row { display: flex; gap: 6px; align-items: center; }
+.resource-card .avail { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 9px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
+.resource-card .avail.yes { background: rgba(107,141,74,.18); color: var(--leaf); border: 1px solid var(--leaf); }
+.resource-card .avail.no  { background: rgba(161,74,42,.18); color: var(--rust); border: 1px solid var(--rust); }
+
+/* Settings */
+.settings-section { background: var(--void-2); border: 1px solid var(--line); border-radius: 4px; padding: 18px 22px; margin-bottom: 14px; }
+.settings-section h4 { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--brass); margin-bottom: 12px; }
+.settings-row { display: grid; grid-template-columns: 180px 1fr; gap: 12px; margin-bottom: 10px; align-items: center; }
+.settings-row label { font-size: 13px; color: var(--cream-dim); }
+.settings-row .hint { font-family: var(--mono); font-size: 10px; color: var(--cream-muted); letter-spacing: .04em; padding-top: 4px; }
+
+/* Modal */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; z-index: 1000; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; }
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--void-2); border: 1px solid var(--brass); border-radius: 5px;
+  max-width: 560px; width: 100%; padding: 22px 24px; position: relative;
+}
+.modal h3 { font-family: var(--serif); font-size: 18px; margin-bottom: 14px; color: var(--brass); }
+.modal .close { position: absolute; top: 10px; right: 14px; color: var(--cream-muted); font-size: 22px; cursor: pointer; line-height: 1; }
+.modal .close:hover { color: var(--cream); }
+.modal .row { margin-bottom: 12px; }
+.modal .row label { display: block; font-size: 12px; color: var(--cream-dim); margin-bottom: 4px; letter-spacing: .04em; }
+.modal .row-flex { display: flex; gap: 10px; }
+.modal .row-flex > * { flex: 1; }
+.modal .row-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.modal textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+
+.toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--brass); color: var(--void); padding: 9px 18px; border-radius: 3px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  font-weight: 700; opacity: 0; transition: all .22s; z-index: 1200; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err { background: var(--rust); color: var(--cream); }
+.toast.ok { background: var(--leaf); color: #fff; }
+
+.empty {
+  padding: 36px 22px; text-align: center; color: var(--cream-muted);
+  background: var(--ink); border: 1px dashed var(--line); border-radius: 4px; font-size: 13px;
+}
+
+.sov {
+  position: fixed; bottom: 8px; right: 10px; font-family: var(--mono); font-size: 9px;
+  color: var(--cream-muted); letter-spacing: .08em; padding: 3px 8px;
+  background: rgba(0,0,0,.5); border-radius: 2px; pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  header.top { padding: 0 10px; gap: 8px; flex-wrap: wrap; height: auto; padding: 8px 10px; }
+  header.top nav.tabs { width: 100%; justify-content: flex-start; }
+  header.top nav.tabs button { padding: 6px 10px; font-size: 12px; }
+  header.top .community-name { display: none; }
+  .app { grid-template-rows: auto 1fr; }
+  main.body { padding: 16px 14px 80px; }
+  .settings-row { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <div class="brand" onclick="goTab('home')">
+      <div class="mark">◊</div>
+      <div>
+        <div class="name">KCC</div>
+        <div class="sub">Community OS · v1</div>
+      </div>
+    </div>
+    <div class="community-name" id="commNameLabel">(loading…)</div>
+    <nav class="tabs" id="tabBar">
+      <button data-tab="home">⌂ Home</button>
+      <button data-tab="members">◉ Members</button>
+      <button data-tab="ledger">⊞ Ledger</button>
+      <button data-tab="governance">§ Governance</button>
+      <button data-tab="calendar">▦ Calendar</button>
+      <button data-tab="resources">⚒ Resources</button>
+      <button data-tab="skills">☆ Skills</button>
+      <button data-tab="settings">⚙ Settings</button>
+    </nav>
+    <div class="top-actions">
+      <button onclick="toggleTheme()" title="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <main class="body" id="body"></main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modalBg"></div>
+<div class="sov">◊ KCC · sovereign · MIT · IndexedDB local</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════
+// CONST
+// ════════════════════════════════════════════════════════════════
+const DB_NAME = 'kcc_db';
+const DB_VERSION = 1;
+const ROLES = ['founder','member','visitor','wwoofer'];
+const LEDGER_CATEGORIES = ['hours','goods','service','tool-loan','gift','adjustment'];
+const PROPOSAL_TYPES = ['decision','change','meeting','agreement'];
+const VOTING_METHODS = ['consensus','majority','sociocracy','unanimous'];
+const EVENT_KINDS = ['workday','harvest','meeting','market','feast','other'];
+const RESOURCE_KINDS = ['tool','equipment','vehicle','space','other'];
+const SKILL_KINDS = ['teach','help-with','looking-for'];
+
+// ════════════════════════════════════════════════════════════════
+// IndexedDB
+// ════════════════════════════════════════════════════════════════
+let db = null;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      ['members','ledger','proposals','events','resources','skills','meta'].forEach(s => {
+        if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: s === 'meta' ? 'key' : 'id' });
+      });
+    };
+    req.onsuccess = () => { db = req.result; resolve(db); };
+  });
+}
+function tx(stores, mode='readonly') { return db.transaction(stores, mode); }
+function dbGet(store, key) { return new Promise((res, rej) => { const r = tx([store]).objectStore(store).get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+function dbGetAll(store) { return new Promise((res, rej) => { const r = tx([store]).objectStore(store).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
+function dbPut(store, value) { return new Promise((res, rej) => { const r = tx([store], 'readwrite').objectStore(store).put(value); r.onsuccess = () => res(value); r.onerror = () => rej(r.error); }); }
+function dbDel(store, key) { return new Promise((res, rej) => { const r = tx([store], 'readwrite').objectStore(store).delete(key); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+
+// ════════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════════
+const state = {
+  members: new Map(), ledger: new Map(), proposals: new Map(),
+  events: new Map(), resources: new Map(), skills: new Map(),
+  meta: {
+    name: 'Your Community',
+    founded: new Date().toISOString().slice(0, 10),
+    peg_definition: '1 KCC ≈ 1 hour of contributed labour',
+    governance_default: 'consensus',
+    ledger_floor: -50,
+    mesh_url: null,
+    theme: 'dark',
+    current_member_id: null,
+  },
+  tab: 'home',
+};
+
+const uid = (p='') => p + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const now = () => new Date().toISOString();
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(t._to); t._to = setTimeout(() => t.className = 'toast', 2400); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return iso; return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function fmtDateShort(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+function isoLocalNow() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+
+// ════════════════════════════════════════════════════════════════
+// Models
+// ════════════════════════════════════════════════════════════════
+function makeMember(o={}) {
+  return { id: uid('m_'), name: o.name || '', handle: o.handle || '', contact: o.contact || '', role: o.role || 'member', skills: o.skills || [], offers: o.offers || [], needs: o.needs || [], notes: o.notes || '', active: o.active !== false, joined_at: o.joined_at || now(), created_at: now(), updated_at: now() };
+}
+function makeLedger(o={}) {
+  return { id: uid('l_'), at: o.at || now(), from_id: o.from_id, to_id: o.to_id, amount_kcc: Number(o.amount_kcc) || 0, description: o.description || '', category: o.category || 'hours', acknowledged_by: o.acknowledged_by || [o.from_id].filter(Boolean), status: o.status || 'pending', created_at: now(), updated_at: now() };
+}
+function makeProposal(o={}) {
+  return { id: uid('pr_'), at: o.at || now(), author_id: o.author_id, title: o.title || '', body: o.body || '', type: o.type || 'decision', voting_method: o.voting_method || state.meta.governance_default, votes: o.votes || {}, status: o.status || 'open', decided_at: null, created_at: now(), updated_at: now() };
+}
+function makeEvent(o={}) {
+  return { id: uid('e_'), at: o.at, end_at: o.end_at || null, title: o.title || '', kind: o.kind || 'meeting', location: o.location || '', notes: o.notes || '', attendees: o.attendees || [], created_at: now(), updated_at: now() };
+}
+function makeResource(o={}) {
+  return { id: uid('r_'), name: o.name || '', owner_id: o.owner_id, kind: o.kind || 'tool', available: o.available !== false, current_borrower_id: o.current_borrower_id || null, borrowed_at: o.borrowed_at || null, notes: o.notes || '', created_at: now(), updated_at: now() };
+}
+function makeSkill(o={}) {
+  return { id: uid('s_'), member_id: o.member_id, kind: o.kind || 'teach', text: o.text || '', active: o.active !== false, created_at: now(), updated_at: now() };
+}
+
+// ════════════════════════════════════════════════════════════════
+// Load / save
+// ════════════════════════════════════════════════════════════════
+async function loadAll() {
+  state.members.clear(); state.ledger.clear(); state.proposals.clear();
+  state.events.clear(); state.resources.clear(); state.skills.clear();
+  for (const x of await dbGetAll('members')) state.members.set(x.id, x);
+  for (const x of await dbGetAll('ledger')) state.ledger.set(x.id, x);
+  for (const x of await dbGetAll('proposals')) state.proposals.set(x.id, x);
+  for (const x of await dbGetAll('events')) state.events.set(x.id, x);
+  for (const x of await dbGetAll('resources')) state.resources.set(x.id, x);
+  for (const x of await dbGetAll('skills')) state.skills.set(x.id, x);
+  const meta = await dbGet('meta', 'community');
+  if (meta) state.meta = { ...state.meta, ...meta.value };
+  applyTheme();
+}
+function applyTheme() { document.documentElement.classList.toggle('light', state.meta.theme === 'light'); }
+async function saveMeta() { await dbPut('meta', { key: 'community', value: state.meta }); }
+async function toggleTheme() { state.meta.theme = state.meta.theme === 'dark' ? 'light' : 'dark'; await saveMeta(); applyTheme(); }
+
+async function saveMember(m) { m.updated_at = now(); state.members.set(m.id, m); await dbPut('members', m); }
+async function saveLedger(l) { l.updated_at = now(); state.ledger.set(l.id, l); await dbPut('ledger', l); }
+async function saveProposal(p) { p.updated_at = now(); state.proposals.set(p.id, p); await dbPut('proposals', p); }
+async function saveEvent(e) { e.updated_at = now(); state.events.set(e.id, e); await dbPut('events', e); }
+async function saveResource(r) { r.updated_at = now(); state.resources.set(r.id, r); await dbPut('resources', r); }
+async function saveSkill(s) { s.updated_at = now(); state.skills.set(s.id, s); await dbPut('skills', s); }
+
+async function delMember(id) { state.members.delete(id); await dbDel('members', id); }
+async function delLedger(id) { state.ledger.delete(id); await dbDel('ledger', id); }
+async function delProposal(id) { state.proposals.delete(id); await dbDel('proposals', id); }
+async function delEvent(id) { state.events.delete(id); await dbDel('events', id); }
+async function delResource(id) { state.resources.delete(id); await dbDel('resources', id); }
+async function delSkill(id) { state.skills.delete(id); await dbDel('skills', id); }
+
+// ════════════════════════════════════════════════════════════════
+// Computed
+// ════════════════════════════════════════════════════════════════
+function balanceOf(memberId) {
+  let balance = 0;
+  for (const l of state.ledger.values()) {
+    if (l.status !== 'confirmed') continue;
+    if (l.from_id === memberId) balance -= l.amount_kcc;
+    if (l.to_id === memberId) balance += l.amount_kcc;
+  }
+  return balance;
+}
+function memberById(id) { return state.members.get(id); }
+function activeMembers() { return Array.from(state.members.values()).filter(m => m.active).sort((a, b) => a.name.localeCompare(b.name)); }
+function currentMember() { return state.meta.current_member_id ? memberById(state.meta.current_member_id) : null; }
+
+// ════════════════════════════════════════════════════════════════
+// Router
+// ════════════════════════════════════════════════════════════════
+function goTab(tab) { state.tab = tab; render(); }
+function render() {
+  $('#commNameLabel').textContent = state.meta.name || 'Your Community';
+  $$('#tabBar button').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+  const body = $('#body');
+  switch (state.tab) {
+    case 'home':       renderHome(body); break;
+    case 'members':    renderMembers(body); break;
+    case 'ledger':     renderLedger(body); break;
+    case 'governance': renderGovernance(body); break;
+    case 'calendar':   renderCalendar(body); break;
+    case 'resources':  renderResources(body); break;
+    case 'skills':     renderSkills(body); break;
+    case 'settings':   renderSettings(body); break;
+    default: renderHome(body);
+  }
+}
+$$('#tabBar button').forEach(b => b.addEventListener('click', () => goTab(b.dataset.tab)));
+
+// ════════════════════════════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════════════════════════════
+function renderHome(body) {
+  const ms = activeMembers();
+  const me = currentMember();
+  const openProps = Array.from(state.proposals.values()).filter(p => p.status === 'open').length;
+  const upcomingEvents = Array.from(state.events.values()).filter(e => new Date(e.at) > new Date()).sort((a,b) => a.at.localeCompare(b.at)).slice(0, 3);
+  const recentLedger = Array.from(state.ledger.values()).sort((a,b) => b.at.localeCompare(a.at)).slice(0, 5);
+  const myBalance = me ? balanceOf(me.id) : null;
+  const totalKcc = Array.from(state.ledger.values()).filter(l => l.status === 'confirmed').reduce((a,l) => a + l.amount_kcc, 0);
+
+  body.innerHTML = `
+    <div class="hero">
+      <h2>${esc(state.meta.name)}</h2>
+      <div class="lede">Founded ${esc(fmtDate(state.meta.founded))} · ${ms.length} member${ms.length === 1 ? '' : 's'} · ${state.meta.peg_definition}</div>
+    </div>
+    ${!me ? `
+      <div class="card" style="border-color:var(--brass);background:linear-gradient(135deg,rgba(192,138,58,.08),transparent)">
+        <div>
+          <strong style="color:var(--brass);font-family:var(--serif)">Welcome.</strong>
+          <p style="font-size:13px;color:var(--cream-dim);margin-top:4px;line-height:1.6">First — who are you? Add yourself as a member, then mark "this is me" in your profile so the ledger and proposals can attribute things to you.</p>
+        </div>
+        <button class="btn brass" onclick="openMemberModal()">+ Add yourself</button>
+      </div>
+    ` : `
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div class="card" style="text-align:center">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Your balance</div>
+          <div class="kcc-balance ${myBalance > 0 ? 'pos' : myBalance < 0 ? 'neg' : 'zero'}" style="font-size:20px;padding:8px 14px">${myBalance.toFixed(1)}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Community flow</div>
+          <div class="kcc-balance" style="font-size:20px;padding:8px 14px">${totalKcc.toFixed(1)}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--cream-muted);margin-top:4px">total KCC circulated</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Open proposals</div>
+          <div style="font-family:var(--serif);font-size:28px;font-weight:700;color:var(--brass)">${openProps}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Members</div>
+          <div style="font-family:var(--serif);font-size:28px;font-weight:700;color:var(--brass)">${ms.length}</div>
+        </div>
+      </div>
+    `}
+
+    ${upcomingEvents.length ? `
+      <div class="section-h"><h3>Upcoming</h3><span class="sub">${upcomingEvents.length} event${upcomingEvents.length === 1 ? '' : 's'}</span><div class="actions"><button class="btn sm" onclick="goTab('calendar')">all →</button></div></div>
+      <div class="cal-list-wrap">
+        ${upcomingEvents.map(renderEventCard).join('')}
+      </div>
+    ` : ''}
+
+    ${recentLedger.length ? `
+      <div class="section-h"><h3>Recent ledger</h3><span class="sub">last ${recentLedger.length}</span><div class="actions"><button class="btn sm" onclick="goTab('ledger')">all →</button></div></div>
+      ${renderLedgerTable(recentLedger)}
+    ` : ''}
+
+    ${ms.length === 0 ? `
+      <div class="empty">No members yet. Click <strong>+ Add yourself</strong> above to start.</div>
+    ` : ''}
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MEMBERS
+// ════════════════════════════════════════════════════════════════
+function renderMembers(body) {
+  const ms = Array.from(state.members.values()).sort((a, b) => a.name.localeCompare(b.name));
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Members</h3>
+      <span class="sub">${ms.length} ${ms.length === 1 ? 'person' : 'people'}</span>
+      <div class="actions">
+        <button class="btn brass" onclick="openMemberModal()">+ Add member</button>
+      </div>
+    </div>
+    ${ms.length === 0 ? `<div class="empty">No members yet. Add yourself first — that's the foundation.</div>` :
+      `<div class="grid">${ms.map(renderMemberCard).join('')}</div>`}
+  `;
+}
+function renderMemberCard(m) {
+  const isMe = state.meta.current_member_id === m.id;
+  const bal = balanceOf(m.id);
+  const initials = m.name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '?';
+  return `<div class="member-card ${isMe ? 'is-me' : ''}" onclick="openMemberModal('${m.id}')">
+    <div class="top">
+      <div class="avatar">${esc(initials)}</div>
+      <div class="name-block">
+        <div class="nm">${esc(m.name || 'Unnamed')}${isMe ? ' · <span style="color:var(--brass);font-family:var(--mono);font-size:10px">this is me</span>' : ''}</div>
+        <div class="handle">${esc(m.handle || '')}${m.contact ? ' · ' + esc(m.contact) : ''}</div>
+      </div>
+      <span class="role-badge role-${m.role}">${m.role}</span>
+    </div>
+    <div class="tags-row">
+      ${(m.skills || []).slice(0, 4).map(s => `<span class="tag leaf">${esc(s)}</span>`).join('')}
+      ${(m.offers || []).slice(0, 3).map(s => `<span class="tag brass">offers: ${esc(s)}</span>`).join('')}
+      ${(m.needs || []).slice(0, 3).map(s => `<span class="tag rust">needs: ${esc(s)}</span>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--line-soft);margin-top:4px">
+      <span class="kcc-balance ${bal > 0 ? 'pos' : bal < 0 ? 'neg' : 'zero'}">${bal.toFixed(1)}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.04em">joined ${fmtDate(m.joined_at)}</span>
+    </div>
+  </div>`;
+}
+
+function openMemberModal(memberId) {
+  const m = memberId ? memberById(memberId) : null;
+  const isExisting = !!m;
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${isExisting ? 'Edit member' : 'Add member'}</h3>
+    <div class="row"><label>Name</label><input type="text" id="mName" value="${esc(m?.name || '')}" placeholder="Their name"></div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>Handle / nickname</label><input type="text" id="mHandle" value="${esc(m?.handle || '')}" placeholder="Optional"></div>
+      <div class="row" style="flex:1"><label>Role</label><select id="mRole">
+        ${ROLES.map(r => `<option value="${r}" ${m?.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row"><label>Contact (email · phone · whatever)</label><input type="text" id="mContact" value="${esc(m?.contact || '')}" placeholder="Optional"></div>
+    <div class="row"><label>Skills (comma-separated)</label><input type="text" id="mSkills" value="${esc((m?.skills || []).join(', '))}" placeholder="e.g. carpentry, beekeeping, plumbing"></div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>Offers</label><input type="text" id="mOffers" value="${esc((m?.offers || []).join(', '))}" placeholder="e.g. childcare, lifts to town"></div>
+      <div class="row" style="flex:1"><label>Needs</label><input type="text" id="mNeeds" value="${esc((m?.needs || []).join(', '))}" placeholder="e.g. help with wiring"></div>
+    </div>
+    <div class="row"><label>Notes</label><textarea id="mNotes" placeholder="Anything else useful for the community to know.">${esc(m?.notes || '')}</textarea></div>
+    <div class="row"><label><input type="checkbox" id="mIsMe" style="width:auto;margin-right:6px" ${state.meta.current_member_id === m?.id ? 'checked' : ''}> This is me (attribute my entries to this member)</label></div>
+    <div class="row-btns">
+      ${isExisting ? `<button class="btn danger" onclick="confirmDelMember('${m.id}')">Delete</button>` : ''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveMemberFromModal('${m?.id || ''}')">${isExisting ? 'Save' : 'Add member'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+  setTimeout(() => $('#mName').focus(), 30);
+}
+async function saveMemberFromModal(id) {
+  const name = $('#mName').value.trim();
+  if (!name) { toast('Name required', 'err'); return; }
+  const m = id ? memberById(id) : makeMember();
+  m.name = name;
+  m.handle = $('#mHandle').value.trim();
+  m.role = $('#mRole').value;
+  m.contact = $('#mContact').value.trim();
+  m.skills = $('#mSkills').value.split(',').map(s => s.trim()).filter(Boolean);
+  m.offers = $('#mOffers').value.split(',').map(s => s.trim()).filter(Boolean);
+  m.needs = $('#mNeeds').value.split(',').map(s => s.trim()).filter(Boolean);
+  m.notes = $('#mNotes').value;
+  await saveMember(m);
+  if ($('#mIsMe').checked) { state.meta.current_member_id = m.id; await saveMeta(); }
+  else if (state.meta.current_member_id === m.id) { state.meta.current_member_id = null; await saveMeta(); }
+  closeModal();
+  toast(id ? 'Member updated' : 'Member added', 'ok');
+  render();
+}
+async function confirmDelMember(id) {
+  const m = memberById(id);
+  if (!confirm('Delete "' + m.name + '"? Their ledger history is preserved but they will no longer appear in lists.')) return;
+  m.active = false;
+  await saveMember(m);
+  if (state.meta.current_member_id === id) { state.meta.current_member_id = null; await saveMeta(); }
+  closeModal();
+  toast('Member archived');
+  render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// LEDGER
+// ════════════════════════════════════════════════════════════════
+function renderLedger(body) {
+  const entries = Array.from(state.ledger.values()).sort((a,b) => b.at.localeCompare(a.at));
+  const me = currentMember();
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Ledger</h3>
+      <span class="sub">${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · denominated in KCC</span>
+      <div class="actions">
+        <button class="btn brass" onclick="openLedgerModal()">+ New entry</button>
+        <button class="btn sm" onclick="exportLedgerCsv()">⤓ CSV</button>
+      </div>
+    </div>
+    ${entries.length === 0 ? `<div class="empty">No ledger entries yet. Record an exchange to start the flow.</div>` :
+      renderLedgerTable(entries)}
+    <div style="margin-top:18px;padding:14px 16px;background:var(--void-2);border:1px solid var(--line);border-radius:4px;font-size:12px;color:var(--cream-muted);line-height:1.65">
+      <strong style="color:var(--brass)">How the ledger works</strong> · Every exchange is a transfer from one member to another, denominated in KCC. Both parties must confirm before the entry counts toward balances. ${state.meta.peg_definition}. Ledger floor: ${state.meta.ledger_floor} KCC (the lowest balance a member can hold).
+    </div>
+  `;
+}
+function renderLedgerTable(entries) {
+  const me = currentMember();
+  return `<table class="ledger-table">
+    <thead><tr><th>When</th><th>From → To</th><th style="text-align:right">Amount</th><th>For</th><th>Cat.</th><th>Status</th><th></th></tr></thead>
+    <tbody>${entries.map(l => {
+      const from = memberById(l.from_id); const to = memberById(l.to_id);
+      const isMine = me && (l.from_id === me.id || l.to_id === me.id);
+      const dir = me && l.to_id === me.id ? 'in' : me && l.from_id === me.id ? 'out' : '';
+      const ackNeeded = l.status === 'pending' && me && !l.acknowledged_by.includes(me.id) && (l.from_id === me.id || l.to_id === me.id);
+      return `<tr ${isMine ? 'style="background:rgba(192,138,58,.03)"' : ''}>
+        <td><span style="font-family:var(--mono);font-size:11px;color:var(--cream-muted)">${fmtDateShort(l.at)}</span></td>
+        <td><span style="color:var(--cream)">${esc(from?.name || '?')}</span> <span style="color:var(--cream-muted)">→</span> <span style="color:var(--cream)">${esc(to?.name || '?')}</span></td>
+        <td style="text-align:right"><span class="amt ${dir === 'in' ? 'amt-in' : dir === 'out' ? 'amt-out' : ''}">${dir === 'out' ? '-' : dir === 'in' ? '+' : ''}${l.amount_kcc.toFixed(1)}</span></td>
+        <td>${esc(l.description)}</td>
+        <td><span class="cat">${esc(l.category)}</span></td>
+        <td><span class="status-${l.status}">${esc(l.status)}</span></td>
+        <td>${ackNeeded ? `<button class="ack-btn" onclick="ackLedger('${l.id}')">✓ confirm</button>` : `<button class="btn sm ghost" onclick="openLedgerModal('${l.id}')">edit</button>`}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function openLedgerModal(id) {
+  const l = id ? state.ledger.get(id) : null;
+  const me = currentMember();
+  const members = activeMembers();
+  if (members.length < 2) { toast('Need at least 2 members to record an exchange', 'err'); return; }
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${l ? 'Edit ledger entry' : 'Record an exchange'}</h3>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>From (giver)</label><select id="lFrom">
+        ${members.map(m => `<option value="${m.id}" ${(l?.from_id || me?.id) === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+      </select></div>
+      <div class="row" style="flex:1"><label>To (receiver)</label><select id="lTo">
+        ${members.map(m => `<option value="${m.id}" ${l?.to_id === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>Amount in KCC</label><input type="number" id="lAmount" value="${l?.amount_kcc || ''}" step="0.5" min="0.5" placeholder="e.g. 3"></div>
+      <div class="row" style="flex:1"><label>Category</label><select id="lCat">
+        ${LEDGER_CATEGORIES.map(c => `<option value="${c}" ${l?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row"><label>What for?</label><input type="text" id="lDesc" value="${esc(l?.description || '')}" placeholder='e.g. "3 hours digging beds", "12 eggs", "ride to market"'></div>
+    <div class="row"><label>When</label><input type="datetime-local" id="lAt" value="${l?.at?.slice(0,16) || isoLocalNow()}"></div>
+    <div class="row-btns">
+      ${l ? `<button class="btn danger" onclick="confirmDelLedger('${l.id}')">Delete</button>` : ''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveLedgerFromModal('${l?.id || ''}')">${l ? 'Save' : 'Record entry'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+async function saveLedgerFromModal(id) {
+  const from_id = $('#lFrom').value, to_id = $('#lTo').value;
+  if (from_id === to_id) { toast('From and To must be different members', 'err'); return; }
+  const amt = Number($('#lAmount').value);
+  if (!amt || amt <= 0) { toast('Amount must be positive', 'err'); return; }
+  const desc = $('#lDesc').value.trim();
+  if (!desc) { toast('Describe what the exchange is for', 'err'); return; }
+  // ledger floor check (from_id will go more negative)
+  const newFromBal = balanceOf(from_id) - amt + (id ? state.ledger.get(id).amount_kcc : 0);
+  if (newFromBal < state.meta.ledger_floor) {
+    if (!confirm(`This entry would put ${memberById(from_id).name} at ${newFromBal.toFixed(1)} KCC, below the floor (${state.meta.ledger_floor}). Record anyway?`)) return;
+  }
+  const me = currentMember();
+  const l = id ? state.ledger.get(id) : makeLedger({ from_id });
+  l.from_id = from_id; l.to_id = to_id; l.amount_kcc = amt;
+  l.description = desc; l.category = $('#lCat').value; l.at = new Date($('#lAt').value).toISOString();
+  // ack tracking
+  if (me) {
+    if (!l.acknowledged_by.includes(me.id)) l.acknowledged_by.push(me.id);
+  } else {
+    l.acknowledged_by = [from_id];
+  }
+  // auto-confirm if both parties ack'd
+  if (l.acknowledged_by.includes(from_id) && l.acknowledged_by.includes(to_id)) l.status = 'confirmed';
+  await saveLedger(l);
+  closeModal();
+  toast(id ? 'Entry updated' : 'Entry recorded', 'ok');
+  render();
+}
+async function ackLedger(id) {
+  const l = state.ledger.get(id); if (!l) return;
+  const me = currentMember(); if (!me) { toast('Set "this is me" on your member profile first', 'err'); return; }
+  if (!l.acknowledged_by.includes(me.id)) l.acknowledged_by.push(me.id);
+  if (l.acknowledged_by.includes(l.from_id) && l.acknowledged_by.includes(l.to_id)) l.status = 'confirmed';
+  await saveLedger(l);
+  toast('Confirmed', 'ok');
+  render();
+}
+async function confirmDelLedger(id) {
+  if (!confirm('Delete this ledger entry?')) return;
+  await delLedger(id); closeModal(); toast('Entry deleted'); render();
+}
+function exportLedgerCsv() {
+  const entries = Array.from(state.ledger.values()).sort((a,b) => b.at.localeCompare(a.at));
+  const rows = [['When','From','To','Amount KCC','Category','Description','Status','Acknowledged by']];
+  for (const l of entries) {
+    rows.push([l.at, memberById(l.from_id)?.name || '?', memberById(l.to_id)?.name || '?', l.amount_kcc, l.category, l.description, l.status, l.acknowledged_by.map(id => memberById(id)?.name || id).join('; ')]);
+  }
+  const csv = rows.map(r => r.map(c => /[,"\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : c).join(',')).join('\n');
+  downloadFile(csv, `kcc-ledger-${ymd(new Date())}.csv`, 'text/csv');
+  toast('CSV downloaded', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════════
+// GOVERNANCE
+// ════════════════════════════════════════════════════════════════
+function renderGovernance(body) {
+  const props = Array.from(state.proposals.values()).sort((a,b) => b.at.localeCompare(a.at));
+  const open = props.filter(p => p.status === 'open');
+  const closed = props.filter(p => p.status !== 'open');
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Governance</h3>
+      <span class="sub">${open.length} open · ${closed.length} decided · default method: ${state.meta.governance_default}</span>
+      <div class="actions"><button class="btn brass" onclick="openProposalModal()">+ New proposal</button></div>
+    </div>
+    ${props.length === 0 ? `<div class="empty">No proposals yet. Anyone can raise one.</div>` : ''}
+    ${open.length ? `<div class="section-h"><h3 style="font-size:14px">Open</h3></div>${open.map(renderProposalCard).join('')}` : ''}
+    ${closed.length ? `<div class="section-h"><h3 style="font-size:14px">Decided</h3></div>${closed.map(renderProposalCard).join('')}` : ''}
+  `;
+}
+function renderProposalCard(p) {
+  const author = memberById(p.author_id);
+  const me = currentMember();
+  const totalMembers = activeMembers().length;
+  const yesCount = Object.values(p.votes).filter(v => v === 'yes').length;
+  const noCount = Object.values(p.votes).filter(v => v === 'no').length;
+  const abstainCount = Object.values(p.votes).filter(v => v === 'abstain').length;
+  const blockCount = Object.values(p.votes).filter(v => v === 'block').length;
+  const myVote = me ? p.votes[me.id] : null;
+  return `<div class="proposal-card ${p.status}">
+    <div class="ph">
+      <h4>${esc(p.title)}</h4>
+      <span class="status-badge status-${p.status}">${p.status}</span>
+      <span class="meta">${esc(p.type)} · ${esc(p.voting_method)} · raised ${fmtDate(p.at)} by ${esc(author?.name || '?')}</span>
+    </div>
+    <div class="body">${esc(p.body)}</div>
+    ${p.status === 'open' && me ? `<div class="vote-row">
+      <button class="vote-btn ${myVote === 'yes' ? 'cast-yes' : ''}" onclick="castVote('${p.id}', 'yes')">✓ Yes</button>
+      <button class="vote-btn ${myVote === 'no' ? 'cast-no' : ''}" onclick="castVote('${p.id}', 'no')">✗ No</button>
+      <button class="vote-btn ${myVote === 'abstain' ? 'cast-abstain' : ''}" onclick="castVote('${p.id}', 'abstain')">∅ Abstain</button>
+      ${p.voting_method === 'consensus' || p.voting_method === 'sociocracy' ? `<button class="vote-btn ${myVote === 'block' ? 'cast-block' : ''}" onclick="castVote('${p.id}', 'block')">⛔ Block</button>` : ''}
+      <span style="flex:1"></span>
+      ${p.author_id === me.id ? `<button class="btn sm ghost" onclick="openProposalModal('${p.id}')">edit</button> <button class="btn sm danger" onclick="withdrawProposal('${p.id}')">withdraw</button>` : ''}
+    </div>` : ''}
+    <div class="tally">
+      <span style="color:var(--leaf)">✓ ${yesCount}</span>
+      <span style="color:var(--rust)">✗ ${noCount}</span>
+      <span>∅ ${abstainCount}</span>
+      ${blockCount ? `<span style="color:var(--rust)">⛔ ${blockCount}</span>` : ''}
+      <span style="margin-left:auto">${yesCount + noCount + abstainCount + blockCount} / ${totalMembers} voted</span>
+      ${p.status === 'open' && me?.id === p.author_id ? `<button class="btn sm brass" onclick="tallyProposal('${p.id}')">tally now →</button>` : ''}
+    </div>
+  </div>`;
+}
+function openProposalModal(id) {
+  const p = id ? state.proposals.get(id) : null;
+  const me = currentMember();
+  if (!me) { toast('Set "this is me" on your member profile first', 'err'); return; }
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${p ? 'Edit proposal' : 'New proposal'}</h3>
+    <div class="row"><label>Title</label><input type="text" id="pTitle" value="${esc(p?.title || '')}" placeholder="Short, clear, action-oriented"></div>
+    <div class="row"><label>Body</label><textarea id="pBody" placeholder="What's the proposal? Context, what's being asked, who'd do it, by when. Be specific.">${esc(p?.body || '')}</textarea></div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>Type</label><select id="pType">
+        ${PROPOSAL_TYPES.map(t => `<option value="${t}" ${p?.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+      </select></div>
+      <div class="row" style="flex:1"><label>Voting method</label><select id="pMethod">
+        ${VOTING_METHODS.map(v => `<option value="${v}" ${(p?.voting_method || state.meta.governance_default) === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row-btns">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveProposalFromModal('${p?.id || ''}')">${p ? 'Save' : 'Raise proposal'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+  setTimeout(() => $('#pTitle').focus(), 30);
+}
+async function saveProposalFromModal(id) {
+  const me = currentMember();
+  const title = $('#pTitle').value.trim();
+  if (!title) { toast('Title required', 'err'); return; }
+  const p = id ? state.proposals.get(id) : makeProposal({ author_id: me.id });
+  p.title = title; p.body = $('#pBody').value;
+  p.type = $('#pType').value; p.voting_method = $('#pMethod').value;
+  await saveProposal(p);
+  closeModal(); toast(id ? 'Proposal updated' : 'Proposal raised', 'ok'); render();
+}
+async function castVote(id, choice) {
+  const me = currentMember(); if (!me) { toast('Set "this is me" on your member profile first', 'err'); return; }
+  const p = state.proposals.get(id); if (!p || p.status !== 'open') return;
+  if (p.votes[me.id] === choice) delete p.votes[me.id];
+  else p.votes[me.id] = choice;
+  await saveProposal(p);
+  render();
+}
+async function tallyProposal(id) {
+  const p = state.proposals.get(id); if (!p) return;
+  const total = activeMembers().length;
+  const yes = Object.values(p.votes).filter(v => v === 'yes').length;
+  const no = Object.values(p.votes).filter(v => v === 'no').length;
+  const blocks = Object.values(p.votes).filter(v => v === 'block').length;
+  const voted = Object.keys(p.votes).length;
+  let passes;
+  if (p.voting_method === 'unanimous') passes = (yes === total);
+  else if (p.voting_method === 'consensus') passes = (blocks === 0 && yes >= 1 && no === 0);
+  else if (p.voting_method === 'sociocracy') passes = (blocks === 0 && yes > 0);
+  else /* majority */ passes = (yes > no);
+  if (!confirm(`Tally "${p.title}" — ${yes} yes, ${no} no, ${blocks} block, ${voted}/${total} voted. Result: ${passes ? 'PASSES' : 'FAILS'}. Lock it in?`)) return;
+  p.status = passes ? 'passed' : 'failed'; p.decided_at = now();
+  await saveProposal(p); render(); toast(passes ? 'Passed' : 'Failed', passes ? 'ok' : 'err');
+}
+async function withdrawProposal(id) {
+  if (!confirm('Withdraw this proposal?')) return;
+  const p = state.proposals.get(id); p.status = 'withdrawn'; p.decided_at = now();
+  await saveProposal(p); render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// CALENDAR
+// ════════════════════════════════════════════════════════════════
+function renderCalendar(body) {
+  const events = Array.from(state.events.values()).sort((a,b) => a.at.localeCompare(b.at));
+  const upcoming = events.filter(e => new Date(e.at) > new Date());
+  const past = events.filter(e => new Date(e.at) <= new Date());
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Calendar</h3>
+      <span class="sub">${upcoming.length} upcoming · ${past.length} past</span>
+      <div class="actions"><button class="btn brass" onclick="openEventModal()">+ New event</button></div>
+    </div>
+    ${events.length === 0 ? `<div class="empty">No events yet.</div>` : ''}
+    ${upcoming.length ? `<div class="section-h"><h3 style="font-size:14px">Upcoming</h3></div><div class="cal-list-wrap">${upcoming.map(renderEventCard).join('')}</div>` : ''}
+    ${past.length ? `<div class="section-h"><h3 style="font-size:14px">Past</h3></div><div class="cal-list-wrap">${past.reverse().slice(0, 12).map(renderEventCard).join('')}</div>` : ''}
+  `;
+}
+function renderEventCard(e) {
+  const me = currentMember();
+  const isAttending = me && e.attendees.includes(me.id);
+  const d = new Date(e.at);
+  return `<div class="event-card">
+    <div class="when-block">
+      <div class="when-day">${d.getDate()}</div>
+      <div class="when-month">${d.toLocaleDateString('en-GB', { month: 'short' })}</div>
+      <div class="when-time">${fmtTime(e.at)}</div>
+    </div>
+    <div class="info-block">
+      <div class="title">${esc(e.title)}</div>
+      <div class="meta">${esc(e.location || '')} ${e.location && e.attendees.length ? '·' : ''} ${e.attendees.length} attending${e.notes ? ' · ' + esc(e.notes.slice(0, 60)) : ''}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+      <span class="kind-badge k-${e.kind}">${e.kind}</span>
+      ${me ? `<button class="btn sm ${isAttending ? 'leaf' : ''}" onclick="toggleAttend('${e.id}')">${isAttending ? '✓ going' : 'attend'}</button>` : ''}
+      <button class="btn sm ghost" onclick="openEventModal('${e.id}')">edit</button>
+    </div>
+  </div>`;
+}
+function openEventModal(id) {
+  const e = id ? state.events.get(id) : null;
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${e ? 'Edit event' : 'New event'}</h3>
+    <div class="row"><label>Title</label><input type="text" id="eTitle" value="${esc(e?.title || '')}" placeholder="e.g. Saturday workday — building chicken coop"></div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>When</label><input type="datetime-local" id="eAt" value="${e?.at?.slice(0,16) || isoLocalNow()}"></div>
+      <div class="row" style="flex:1"><label>Kind</label><select id="eKind">
+        ${EVENT_KINDS.map(k => `<option value="${k}" ${e?.kind === k ? 'selected' : ''}>${k}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row"><label>Location</label><input type="text" id="eLoc" value="${esc(e?.location || '')}" placeholder="Where on the land / in the community"></div>
+    <div class="row"><label>Notes</label><textarea id="eNotes" placeholder="What to bring, what to expect, who's leading">${esc(e?.notes || '')}</textarea></div>
+    <div class="row-btns">
+      ${e ? `<button class="btn danger" onclick="confirmDelEvent('${e.id}')">Delete</button>` : ''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveEventFromModal('${e?.id || ''}')">${e ? 'Save' : 'Add event'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+async function saveEventFromModal(id) {
+  const title = $('#eTitle').value.trim(); if (!title) { toast('Title required', 'err'); return; }
+  const e = id ? state.events.get(id) : makeEvent({ at: new Date($('#eAt').value).toISOString() });
+  e.title = title; e.at = new Date($('#eAt').value).toISOString();
+  e.kind = $('#eKind').value; e.location = $('#eLoc').value; e.notes = $('#eNotes').value;
+  await saveEvent(e); closeModal(); toast(id ? 'Event saved' : 'Event added', 'ok'); render();
+}
+async function toggleAttend(id) {
+  const me = currentMember(); if (!me) { toast('Set "this is me" on your member profile first', 'err'); return; }
+  const e = state.events.get(id); if (!e) return;
+  if (e.attendees.includes(me.id)) e.attendees = e.attendees.filter(a => a !== me.id);
+  else e.attendees.push(me.id);
+  await saveEvent(e); render();
+}
+async function confirmDelEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  await delEvent(id); closeModal(); toast('Event deleted'); render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// RESOURCES
+// ════════════════════════════════════════════════════════════════
+function renderResources(body) {
+  const rs = Array.from(state.resources.values()).sort((a,b) => a.name.localeCompare(b.name));
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Resources</h3>
+      <span class="sub">${rs.length} item${rs.length === 1 ? '' : 's'} · borrow within the community</span>
+      <div class="actions"><button class="btn brass" onclick="openResourceModal()">+ New resource</button></div>
+    </div>
+    ${rs.length === 0 ? `<div class="empty">No shared resources yet. Tools, vehicles, equipment, spaces — anything that can be borrowed.</div>` :
+      `<div class="grid">${rs.map(renderResourceCard).join('')}</div>`}
+  `;
+}
+function renderResourceCard(r) {
+  const owner = memberById(r.owner_id);
+  const borrower = r.current_borrower_id ? memberById(r.current_borrower_id) : null;
+  const me = currentMember();
+  return `<div class="resource-card">
+    <div class="top">
+      <div class="ttl">${esc(r.name)}</div>
+      <span class="avail ${r.available ? 'yes' : 'no'}">${r.available ? 'available' : 'borrowed'}</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="tag">${esc(r.kind)}</span>
+      <span class="tag brass">owned by ${esc(owner?.name || '?')}</span>
+      ${borrower ? `<span class="tag rust">with ${esc(borrower.name)}</span>` : ''}
+    </div>
+    ${r.notes ? `<div style="font-size:12px;color:var(--cream-dim);line-height:1.5">${esc(r.notes)}</div>` : ''}
+    <div class="borrow-row">
+      ${me ? (r.available ?
+        `<button class="btn sm leaf" onclick="borrowResource('${r.id}')">borrow</button>` :
+        (borrower?.id === me.id ? `<button class="btn sm brass" onclick="returnResource('${r.id}')">return</button>` : '')
+      ) : ''}
+      <button class="btn sm ghost" onclick="openResourceModal('${r.id}')" style="margin-left:auto">edit</button>
+    </div>
+  </div>`;
+}
+function openResourceModal(id) {
+  const r = id ? state.resources.get(id) : null;
+  const me = currentMember();
+  const members = activeMembers();
+  if (members.length === 0) { toast('Add a member first', 'err'); return; }
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${r ? 'Edit resource' : 'New resource'}</h3>
+    <div class="row"><label>Name</label><input type="text" id="rName" value="${esc(r?.name || '')}" placeholder="e.g. Cordless drill, Land Rover, Polytunnel"></div>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>Kind</label><select id="rKind">
+        ${RESOURCE_KINDS.map(k => `<option value="${k}" ${r?.kind === k ? 'selected' : ''}>${k}</option>`).join('')}
+      </select></div>
+      <div class="row" style="flex:1"><label>Owner</label><select id="rOwner">
+        ${members.map(m => `<option value="${m.id}" ${(r?.owner_id || me?.id) === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row"><label>Notes (care instructions, condition, where it's kept)</label><textarea id="rNotes">${esc(r?.notes || '')}</textarea></div>
+    <div class="row-btns">
+      ${r ? `<button class="btn danger" onclick="confirmDelResource('${r.id}')">Delete</button>` : ''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveResourceFromModal('${r?.id || ''}')">${r ? 'Save' : 'Add resource'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+async function saveResourceFromModal(id) {
+  const name = $('#rName').value.trim(); if (!name) { toast('Name required', 'err'); return; }
+  const r = id ? state.resources.get(id) : makeResource();
+  r.name = name; r.kind = $('#rKind').value; r.owner_id = $('#rOwner').value; r.notes = $('#rNotes').value;
+  await saveResource(r); closeModal(); toast(id ? 'Resource saved' : 'Resource added', 'ok'); render();
+}
+async function borrowResource(id) {
+  const me = currentMember(); if (!me) { toast('Set "this is me" first', 'err'); return; }
+  const r = state.resources.get(id); if (!r) return;
+  r.available = false; r.current_borrower_id = me.id; r.borrowed_at = now();
+  await saveResource(r); toast('Borrowed', 'ok'); render();
+}
+async function returnResource(id) {
+  const r = state.resources.get(id); r.available = true; r.current_borrower_id = null; r.borrowed_at = null;
+  await saveResource(r); toast('Returned', 'ok'); render();
+}
+async function confirmDelResource(id) {
+  if (!confirm('Delete this resource?')) return;
+  await delResource(id); closeModal(); toast('Resource deleted'); render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// SKILLS
+// ════════════════════════════════════════════════════════════════
+function renderSkills(body) {
+  const ss = Array.from(state.skills.values()).filter(s => s.active).sort((a,b) => b.created_at.localeCompare(a.created_at));
+  const teach = ss.filter(s => s.kind === 'teach');
+  const help = ss.filter(s => s.kind === 'help-with');
+  const looking = ss.filter(s => s.kind === 'looking-for');
+  body.innerHTML = `
+    <div class="section-h">
+      <h3>Skills & exchanges</h3>
+      <span class="sub">${ss.length} active offers · teach · help-with · looking-for</span>
+      <div class="actions"><button class="btn brass" onclick="openSkillModal()">+ Post offer</button></div>
+    </div>
+    ${ss.length === 0 ? `<div class="empty">No active offers. Post one — what can you teach, where do you need help, what are you looking for?</div>` : ''}
+    ${teach.length ? `<div class="section-h"><h3 style="font-size:14px;color:var(--leaf)">▸ Can teach</h3></div><div class="grid">${teach.map(renderSkillCard).join('')}</div>` : ''}
+    ${help.length ? `<div class="section-h"><h3 style="font-size:14px;color:var(--amber)">▸ Help with</h3></div><div class="grid">${help.map(renderSkillCard).join('')}</div>` : ''}
+    ${looking.length ? `<div class="section-h"><h3 style="font-size:14px;color:var(--slate)">▸ Looking for</h3></div><div class="grid">${looking.map(renderSkillCard).join('')}</div>` : ''}
+  `;
+}
+function renderSkillCard(s) {
+  const m = memberById(s.member_id);
+  const colorClass = s.kind === 'teach' ? 'leaf' : s.kind === 'help-with' ? 'brass' : 'slate';
+  return `<div class="skill-card">
+    <div class="top">
+      <div class="ttl">${esc(s.text)}</div>
+      <span class="tag ${colorClass}">${esc(s.kind)}</span>
+    </div>
+    <div class="by">— ${esc(m?.name || 'unknown')} · ${fmtDate(s.created_at)}</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn sm ghost" onclick="openSkillModal('${s.id}')">edit</button>
+      <button class="btn sm danger" onclick="archiveSkill('${s.id}')" style="margin-left:auto">archive</button>
+    </div>
+  </div>`;
+}
+function openSkillModal(id) {
+  const s = id ? state.skills.get(id) : null;
+  const me = currentMember();
+  if (!me && !id) { toast('Set "this is me" first', 'err'); return; }
+  const members = activeMembers();
+  $('#modalBg').innerHTML = `<div class="modal">
+    <span class="close" onclick="closeModal()">×</span>
+    <h3>${s ? 'Edit offer' : 'Post a skill offer'}</h3>
+    <div class="row-flex">
+      <div class="row" style="flex:1"><label>By</label><select id="sMember">
+        ${members.map(m => `<option value="${m.id}" ${(s?.member_id || me?.id) === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+      </select></div>
+      <div class="row" style="flex:1"><label>Kind</label><select id="sKind">
+        ${SKILL_KINDS.map(k => `<option value="${k}" ${s?.kind === k ? 'selected' : ''}>${k}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row"><label>What</label><textarea id="sText" placeholder='e.g. "I can teach willow weaving Sundays", "Need help with electrical work in the barn"'>${esc(s?.text || '')}</textarea></div>
+    <div class="row-btns">
+      ${s ? `<button class="btn danger" onclick="confirmDelSkill('${s.id}')">Delete</button>` : ''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn brass" onclick="saveSkillFromModal('${s?.id || ''}')">${s ? 'Save' : 'Post'}</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+async function saveSkillFromModal(id) {
+  const text = $('#sText').value.trim(); if (!text) { toast('Describe the offer', 'err'); return; }
+  const s = id ? state.skills.get(id) : makeSkill();
+  s.member_id = $('#sMember').value; s.kind = $('#sKind').value; s.text = text;
+  await saveSkill(s); closeModal(); toast(id ? 'Saved' : 'Posted', 'ok'); render();
+}
+async function archiveSkill(id) {
+  const s = state.skills.get(id); s.active = false; await saveSkill(s); toast('Archived'); render();
+}
+async function confirmDelSkill(id) {
+  if (!confirm('Delete this offer?')) return;
+  await delSkill(id); closeModal(); toast('Deleted'); render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════════════
+function renderSettings(body) {
+  const total = state.members.size + state.ledger.size + state.proposals.size + state.events.size + state.resources.size + state.skills.size;
+  body.innerHTML = `
+    <div class="section-h"><h3>Settings</h3><span class="sub">community-wide · stored in this browser</span></div>
+
+    <div class="settings-section">
+      <h4>Community</h4>
+      <div class="settings-row"><label>Name</label><div><input type="text" id="setName" value="${esc(state.meta.name)}"></div></div>
+      <div class="settings-row"><label>Founded</label><div><input type="date" id="setFounded" value="${esc(state.meta.founded)}"></div></div>
+      <div class="settings-row"><label>KCC peg definition</label><div>
+        <input type="text" id="setPeg" value="${esc(state.meta.peg_definition)}">
+        <div class="hint">e.g. "1 KCC ≈ 1 hour of labour" · "1 KCC = 1 kWh contributed" · whatever your community agrees</div>
+      </div></div>
+      <div class="settings-row"><label>Default voting method</label><div>
+        <select id="setGov">${VOTING_METHODS.map(v => `<option value="${v}" ${state.meta.governance_default === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <div class="hint">consensus: 0 blocks + 0 no + ≥1 yes · sociocracy: 0 blocks + ≥1 yes · majority: yes > no · unanimous: all yes</div>
+      </div></div>
+      <div class="settings-row"><label>Ledger floor (KCC)</label><div>
+        <input type="number" id="setFloor" value="${state.meta.ledger_floor}" step="1">
+        <div class="hint">Lowest balance a member can hold without community confirmation. Default: -50.</div>
+      </div></div>
+      <div class="settings-row"><label>Mesh sync URL (optional)</label><div>
+        <input type="text" id="setMesh" value="${esc(state.meta.mesh_url || '')}" placeholder="leave empty to stay device-local">
+        <div class="hint">Point at a relay (Cloudflare Worker or your community Pi) to sync between members.</div>
+      </div></div>
+      <div style="margin-top:14px"><button class="btn brass" onclick="saveSettingsFromModal()">Save settings</button></div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Backup & data</h4>
+      <div class="settings-row"><label>Records</label><div style="font-family:var(--mono);font-size:11px;color:var(--cream-muted);letter-spacing:.04em">${state.members.size} members · ${state.ledger.size} ledger entries · ${state.proposals.size} proposals · ${state.events.size} events · ${state.resources.size} resources · ${state.skills.size} skill offers · ${total} records total</div></div>
+      <div class="settings-row"><label>Export whole community</label><div><button class="btn brass" onclick="exportAll()">⤓ Download JSON backup</button><div class="hint">One file containing everything. Re-importable into any KCC install.</div></div></div>
+      <div class="settings-row"><label>Import backup</label><div><input type="file" id="importFile" accept=".json" onchange="importAll(this.files[0])"><div class="hint">Merges into your current community. Existing IDs win.</div></div></div>
+      <div class="settings-row"><label>Reset</label><div><button class="btn danger" onclick="wipeAll()">⚠ Reset everything</button><div class="hint">Deletes ALL community data from this browser. Cannot be undone.</div></div></div>
+    </div>
+
+    <div class="settings-section">
+      <h4>About</h4>
+      <div style="font-size:12.5px;color:var(--cream-dim);line-height:1.65">
+        KCC v1.0 · Konomi Cube Coin · Community OS · MIT · part of the AI Native Solutions estate.<br>
+        Single HTML PWA · IndexedDB local · works offline · save the file and it runs forever.<br>
+        Source: <a href="https://github.com/sjgant80-hub/kcc" target="_blank">github.com/sjgant80-hub/kcc</a> · Estate: <a href="https://www.ai-nativesolutions.com" target="_blank">ai-nativesolutions.com</a>
+      </div>
+    </div>
+  `;
+}
+async function saveSettingsFromModal() {
+  state.meta.name = $('#setName').value.trim() || 'Your Community';
+  state.meta.founded = $('#setFounded').value;
+  state.meta.peg_definition = $('#setPeg').value;
+  state.meta.governance_default = $('#setGov').value;
+  state.meta.ledger_floor = Number($('#setFloor').value) || -50;
+  state.meta.mesh_url = $('#setMesh').value.trim() || null;
+  await saveMeta(); toast('Settings saved', 'ok'); render();
+}
+async function exportAll() {
+  const data = {
+    kcc_version: '1.0', exported_at: now(),
+    meta: state.meta,
+    members: Array.from(state.members.values()),
+    ledger: Array.from(state.ledger.values()),
+    proposals: Array.from(state.proposals.values()),
+    events: Array.from(state.events.values()),
+    resources: Array.from(state.resources.values()),
+    skills: Array.from(state.skills.values()),
+  };
+  downloadFile(JSON.stringify(data, null, 2), `kcc-${state.meta.name.toLowerCase().replace(/\s+/g, '-')}-${ymd(new Date())}.json`, 'application/json');
+  toast('Backup downloaded', 'ok');
+}
+async function importAll(file) {
+  if (!file) return;
+  const txt = await file.text();
+  let data; try { data = JSON.parse(txt); } catch (e) { toast('Invalid JSON', 'err'); return; }
+  if (!data.kcc_version) { toast('Not a KCC backup', 'err'); return; }
+  if (!confirm(`Import ${data.members?.length || 0} members, ${data.ledger?.length || 0} ledger entries, ${data.proposals?.length || 0} proposals? Existing IDs will be overwritten.`)) return;
+  if (data.meta) state.meta = { ...state.meta, ...data.meta };
+  for (const m of data.members || []) { state.members.set(m.id, m); await dbPut('members', m); }
+  for (const l of data.ledger || []) { state.ledger.set(l.id, l); await dbPut('ledger', l); }
+  for (const p of data.proposals || []) { state.proposals.set(p.id, p); await dbPut('proposals', p); }
+  for (const e of data.events || []) { state.events.set(e.id, e); await dbPut('events', e); }
+  for (const r of data.resources || []) { state.resources.set(r.id, r); await dbPut('resources', r); }
+  for (const s of data.skills || []) { state.skills.set(s.id, s); await dbPut('skills', s); }
+  await saveMeta();
+  toast('Imported', 'ok'); render();
+}
+async function wipeAll() {
+  if (!confirm('Delete ALL community data from this browser? Cannot be undone. Have you exported a backup?')) return;
+  if (!confirm('Really wipe everything?')) return;
+  await db.close();
+  await new Promise((res, rej) => { const r = indexedDB.deleteDatabase(DB_NAME); r.onsuccess = res; r.onerror = rej; });
+  location.reload();
+}
+
+// ════════════════════════════════════════════════════════════════
+// Modal + helpers
+// ════════════════════════════════════════════════════════════════
+function closeModal() { $('#modalBg').classList.remove('open'); $('#modalBg').innerHTML = ''; }
+$('#modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime }); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function ymd(d) { return d.toISOString().slice(0, 10); }
+
+// ════════════════════════════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════════════════════════════
+(async () => {
+  try {
+    await openDB();
+    await loadAll();
+    render();
+  } catch (e) {
+    console.error('boot failed', e);
+    document.body.innerHTML = '<div style="padding:40px;color:#ebe3d2;background:#1a1612;min-height:100vh;font-family:system-ui,sans-serif"><h1 style="color:#c08a3a;font-family:Georgia,serif">KCC could not start</h1><p>' + esc(e.message) + '</p><p>Try: Ctrl+Shift+Delete to clear site data, then reload.</p></div>';
+  }
+})();
+</script>
+</body>
+</html>

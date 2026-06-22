@@ -1,0 +1,14 @@
+{
+  "name": "kcc",
+  "fullName": "Konomi Cube Coin · Community OS",
+  "level": 4,
+  "parent": null,
+  "prime": 1297,
+  "meshChannel": "kcc-mesh",
+  "spec": "https://www.ai-nativesolutions.com/spec.html",
+  "licence": "MIT",
+  "seal": "◊·κ=1",
+  "updatedAt": "2026-06-22",
+  "version": "1.0.0",
+  "description": "Konomi Cube Coin · community OS for off-grid / intentional communities. Members directory · mutual-credit ledger denominated in KCC · governance (proposals + voting) · calendar · resource share · skill share · cross-member mesh sync. Sovereign single-HTML PWA, IndexedDB local, Raspberry Pi deployable. The operator layer; cube cosmology stays private."
+}
