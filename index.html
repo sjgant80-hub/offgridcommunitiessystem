@@ -321,6 +321,7 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
       <button data-tab="resources">⚒ Resources</button>
       <button data-tab="skills">☆ Skills</button>
       <button data-tab="settings">⚙ Settings</button>
+      <button data-tab="help">? Help</button>
     </nav>
     <div class="top-actions">
       <button onclick="toggleTheme()" title="Toggle theme">☾</button>
@@ -346,7 +347,18 @@ const DB_VERSION = 1;
 const ROLES = ['founder','member','visitor','wwoofer'];
 const LEDGER_CATEGORIES = ['hours','goods','service','tool-loan','gift','adjustment'];
 const PROPOSAL_TYPES = ['decision','change','meeting','agreement'];
-const VOTING_METHODS = ['consensus','majority','sociocracy','unanimous'];
+const VOTING_METHODS = ['fall-consensus','consensus','majority','sociocracy','unanimous'];
+// Fall Consensus · 7-dim bloom vector · cosine convergence (algorithm ported from fallconsensus seed, sovereignty intact)
+const FALL_DIMS = [
+  {k:'alignment',     l:'Alignment',    d:'Does this serve our shared purpose?'},
+  {k:'urgency',       l:'Urgency',      d:'How time-sensitive is this?'},
+  {k:'risk',          l:'Risk comfort', d:'How comfortable are we with the downside?'},
+  {k:'resources',     l:'Resources',    d:'Do we have what this requires?'},
+  {k:'reversibility', l:'Reversibility',d:'Can we undo if wrong?'},
+  {k:'fairness',      l:'Fairness',     d:'Is this equitable across members?'},
+  {k:'readiness',     l:'Readiness',    d:'Is the group ready to execute?'}
+];
+const FALL_THRESH = {avgSim: 70, minPair: 50, maxVar: 0.15};
 const EVENT_KINDS = ['workday','harvest','meeting','market','feast','other'];
 const RESOURCE_KINDS = ['tool','equipment','vehicle','space','other'];
 const SKILL_KINDS = ['teach','help-with','looking-for'];
@@ -386,7 +398,8 @@ const state = {
     unit_label_short: 'credits',
     founded: new Date().toISOString().slice(0, 10),
     peg_definition: '1 credit ≈ 1 hour of contributed labour',
-    governance_default: 'consensus',
+    governance_default: 'fall-consensus',
+  onboarded: false,
     ledger_floor: -50,
     mesh_url: null,
     theme: 'dark',
@@ -402,6 +415,51 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(t._to); t._to = setTimeout(() => t.className = 'toast', 2400); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function unit() { return state.meta.unit_label_short || 'credits'; }
+
+// ─── FALL CONSENSUS helpers (ported from fallconsensus seed) ───
+function cosineSim(a, b) {
+  // a, b: {dimKey: 0..100}
+  let dot = 0, mA = 0, mB = 0;
+  for (const d of FALL_DIMS) {
+    const va = (a?.[d.k] ?? 50) / 100;
+    const vb = (b?.[d.k] ?? 50) / 100;
+    dot += va * vb; mA += va * va; mB += vb * vb;
+  }
+  return (mA && mB) ? (dot / Math.sqrt(mA * mB)) * 100 : 0;
+}
+function bloomConvergence(positions) {
+  // positions: array of {dimKey: 0..100}
+  const valid = positions.filter(p => p && typeof p === 'object' && !p._abstain);
+  if (valid.length < 2) return { avg: 0, min: 100, variance: 0, converged: false, voters: valid.length, reason: 'need ≥2 positions' };
+  let sum = 0, cnt = 0, mn = 100;
+  for (let i = 0; i < valid.length; i++) for (let j = i + 1; j < valid.length; j++) {
+    const s = cosineSim(valid[i], valid[j]);
+    sum += s; cnt += 1; if (s < mn) mn = s;
+  }
+  const avg = cnt ? sum / cnt : 0;
+  let totalVar = 0;
+  for (const d of FALL_DIMS) {
+    const vs = valid.map(p => (p[d.k] ?? 50) / 100);
+    const m = vs.reduce((a, b) => a + b, 0) / vs.length;
+    totalVar += vs.reduce((a, v) => a + (v - m) ** 2, 0) / vs.length;
+  }
+  const converged = avg >= FALL_THRESH.avgSim && mn >= FALL_THRESH.minPair && totalVar <= FALL_THRESH.maxVar;
+  const reason = converged ? 'all thresholds met' :
+    avg < FALL_THRESH.avgSim ? `avg sim ${avg.toFixed(0)}% < ${FALL_THRESH.avgSim}%` :
+    mn < FALL_THRESH.minPair ? `weakest pair ${mn.toFixed(0)}% < ${FALL_THRESH.minPair}%` :
+    `variance ${totalVar.toFixed(3)} > ${FALL_THRESH.maxVar}`;
+  return { avg, min: mn, variance: totalVar, converged, voters: valid.length, reason };
+}
+function renderBloomBars(pos, label) {
+  if (!pos || pos._abstain) return `<span style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.04em">abstained</span>`;
+  const colors = ['#3d8ac9','#3db88a','#c08a3a','#a14a2a','#7b5cd4','#ec4899','#14b8a6'];
+  return `<div style="display:flex;gap:2px;align-items:flex-end;height:30px;width:84px" title="${label}">
+    ${FALL_DIMS.map((d, i) => {
+      const v = pos[d.k] ?? 50;
+      return `<div style="flex:1;background:${colors[i]};height:${Math.max(4, v)}%;border-radius:1px 1px 0 0;opacity:.85" title="${d.l}: ${v}"></div>`;
+    }).join('')}
+  </div>`;
+}
 function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return iso; return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
 function fmtDateShort(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
 function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -496,6 +554,7 @@ function render() {
     case 'resources':  renderResources(body); break;
     case 'skills':     renderSkills(body); break;
     case 'settings':   renderSettings(body); break;
+    case 'help':       renderHelp(body); break;
     default: renderHome(body);
   }
 }
@@ -816,6 +875,7 @@ function renderGovernance(body) {
   `;
 }
 function renderProposalCard(p) {
+  if (p.voting_method === 'fall-consensus') return renderFallConsensusCard(p);
   const author = memberById(p.author_id);
   const me = currentMember();
   const totalMembers = activeMembers().length;
@@ -848,6 +908,76 @@ function renderProposalCard(p) {
       ${p.status === 'open' && me?.id === p.author_id ? `<button class="btn sm brass" onclick="tallyProposal('${p.id}')">tally now →</button>` : ''}
     </div>
   </div>`;
+}
+
+function renderFallConsensusCard(p) {
+  const author = memberById(p.author_id);
+  const me = currentMember();
+  const totalMembers = activeMembers().length;
+  const positions = Object.values(p.votes);
+  const conv = bloomConvergence(positions);
+  const myPos = me ? p.votes[me.id] : null;
+  const memberPositions = Object.entries(p.votes).map(([mid, pos]) => ({ m: memberById(mid), pos }));
+
+  return `<div class="proposal-card ${p.status}" style="border-left:3px solid var(--brass)">
+    <div class="ph">
+      <h4>${esc(p.title)}</h4>
+      <span class="status-badge status-${p.status}">${p.status}</span>
+      <span class="meta">${esc(p.type)} · <strong style="color:var(--brass)">fall-consensus · 7-dim</strong> · raised ${fmtDate(p.at)} by ${esc(author?.name || '?')}</span>
+    </div>
+    <div class="body">${esc(p.body)}</div>
+
+    <div style="background:var(--ink);border:1px solid var(--line);border-radius:4px;padding:14px 16px;margin:10px 0">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <strong style="font-family:var(--mono);font-size:10px;color:var(--brass);letter-spacing:.12em;text-transform:uppercase">Convergence</strong>
+        <span class="kcc-balance ${conv.converged ? 'pos' : 'zero'}" style="font-family:var(--mono);font-size:13px">${conv.avg.toFixed(0)}% avg · ${conv.min.toFixed(0)}% min · σ²=${conv.variance.toFixed(3)}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.04em">${conv.voters}/${totalMembers} positions · ${esc(conv.reason)}</span>
+      </div>
+      ${conv.converged ? `<div style="font-family:var(--mono);font-size:11px;color:var(--leaf);letter-spacing:.04em;padding:6px 0">◆ thresholds met — ready to lock in</div>` : ''}
+      ${memberPositions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px">
+        ${memberPositions.map(({m, pos}) => `<div style="text-align:center;font-size:11px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.04em;margin-bottom:2px">${esc(m?.name || '?')}</div>
+          ${renderBloomBars(pos, m?.name || '')}
+        </div>`).join('')}
+      </div>` : ''}
+    </div>
+
+    ${p.status === 'open' && me ? `<div style="margin-top:10px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Your 7-dim position · drag sliders</div>
+      ${FALL_DIMS.map(d => {
+        const v = (myPos && !myPos._abstain && typeof myPos === 'object') ? (myPos[d.k] ?? 50) : 50;
+        return `<div style="display:grid;grid-template-columns:120px 1fr 36px;gap:10px;align-items:center;padding:3px 0">
+          <label style="font-size:12px;color:var(--cream-dim)" title="${esc(d.d)}">${esc(d.l)}</label>
+          <input type="range" min="0" max="100" value="${v}" data-prop="${p.id}" data-dim="${d.k}" oninput="onFallSliderInput(this)" style="accent-color:var(--brass)">
+          <span class="dim-v-${d.k}-${p.id}" style="font-family:var(--mono);font-size:11px;color:var(--brass);text-align:right">${v}</span>
+        </div>`;
+      }).join('')}
+      <div class="vote-row" style="margin-top:10px">
+        <button class="btn sm brass" onclick="submitFallPosition('${p.id}')">${myPos && !myPos._abstain ? '✓ update position' : '✓ submit position'}</button>
+        <button class="vote-btn ${myPos && myPos._abstain ? 'cast-abstain' : ''}" onclick="castVote('${p.id}', {_abstain:true})">∅ Abstain</button>
+        <span style="flex:1"></span>
+        ${p.author_id === me.id ? `<button class="btn sm ghost" onclick="openProposalModal('${p.id}')">edit</button> <button class="btn sm danger" onclick="withdrawProposal('${p.id}')">withdraw</button> ${conv.converged ? `<button class="btn sm brass" onclick="tallyProposal('${p.id}')">lock in →</button>` : ''}` : ''}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+function onFallSliderInput(el) {
+  const dim = el.dataset.dim;
+  const span = document.querySelector('.dim-v-' + dim + '-' + el.dataset.prop);
+  if (span) span.textContent = el.value;
+}
+async function submitFallPosition(propId) {
+  const me = currentMember(); if (!me) { toast('Set "this is me" first', 'err'); return; }
+  const p = state.proposals.get(propId); if (!p || p.status !== 'open') return;
+  const pos = {};
+  FALL_DIMS.forEach(d => {
+    const el = document.querySelector(`input[data-prop="${propId}"][data-dim="${d.k}"]`);
+    pos[d.k] = el ? Number(el.value) : 50;
+  });
+  p.votes[me.id] = pos;
+  await saveProposal(p);
+  render();
+  toast('Position submitted', 'ok');
 }
 function openProposalModal(id) {
   const p = id ? state.proposals.get(id) : null;
@@ -887,7 +1017,8 @@ async function saveProposalFromModal(id) {
 async function castVote(id, choice) {
   const me = currentMember(); if (!me) { toast('Set "this is me" on your member profile first', 'err'); return; }
   const p = state.proposals.get(id); if (!p || p.status !== 'open') return;
-  if (p.votes[me.id] === choice) delete p.votes[me.id];
+  // Fall-consensus abstain comes as {_abstain:true}; equality compare on objects always false, so just set
+  if (typeof choice === 'string' && p.votes[me.id] === choice) delete p.votes[me.id];
   else p.votes[me.id] = choice;
   await saveProposal(p);
   render();
@@ -895,16 +1026,23 @@ async function castVote(id, choice) {
 async function tallyProposal(id) {
   const p = state.proposals.get(id); if (!p) return;
   const total = activeMembers().length;
-  const yes = Object.values(p.votes).filter(v => v === 'yes').length;
-  const no = Object.values(p.votes).filter(v => v === 'no').length;
-  const blocks = Object.values(p.votes).filter(v => v === 'block').length;
-  const voted = Object.keys(p.votes).length;
-  let passes;
-  if (p.voting_method === 'unanimous') passes = (yes === total);
-  else if (p.voting_method === 'consensus') passes = (blocks === 0 && yes >= 1 && no === 0);
-  else if (p.voting_method === 'sociocracy') passes = (blocks === 0 && yes > 0);
-  else /* majority */ passes = (yes > no);
-  if (!confirm(`Tally "${p.title}" — ${yes} yes, ${no} no, ${blocks} block, ${voted}/${total} voted. Result: ${passes ? 'PASSES' : 'FAILS'}. Lock it in?`)) return;
+  let passes; let summary;
+  if (p.voting_method === 'fall-consensus') {
+    const conv = bloomConvergence(Object.values(p.votes));
+    passes = conv.converged;
+    summary = `Fall consensus · ${conv.voters}/${total} positions · avg ${conv.avg.toFixed(0)}% · min ${conv.min.toFixed(0)}% · σ²=${conv.variance.toFixed(3)} · ${conv.reason}`;
+  } else {
+    const yes = Object.values(p.votes).filter(v => v === 'yes').length;
+    const no = Object.values(p.votes).filter(v => v === 'no').length;
+    const blocks = Object.values(p.votes).filter(v => v === 'block').length;
+    const voted = Object.keys(p.votes).length;
+    if (p.voting_method === 'unanimous') passes = (yes === total);
+    else if (p.voting_method === 'consensus') passes = (blocks === 0 && yes >= 1 && no === 0);
+    else if (p.voting_method === 'sociocracy') passes = (blocks === 0 && yes > 0);
+    else /* majority */ passes = (yes > no);
+    summary = `${yes} yes · ${no} no · ${blocks} block · ${voted}/${total} voted`;
+  }
+  if (!confirm(`Tally "${p.title}" — ${summary}. Result: ${passes ? 'PASSES' : 'FAILS'}. Lock it in?`)) return;
   p.status = passes ? 'passed' : 'failed'; p.decided_at = now();
   await saveProposal(p); render(); toast(passes ? 'Passed' : 'Failed', passes ? 'ok' : 'err');
 }
@@ -1251,6 +1389,126 @@ async function wipeAll() {
 }
 
 // ════════════════════════════════════════════════════════════════
+// HELP TAB · how it works
+// ════════════════════════════════════════════════════════════════
+function renderHelp(body) {
+  body.innerHTML = `
+    <div class="hero" style="background:linear-gradient(135deg,rgba(192,138,58,.08),rgba(107,141,74,.04))">
+      <h2>How this works</h2>
+      <div class="lede">Read once. It's all in one HTML file on your device. No accounts. No subscriptions. No data leaves you.</div>
+    </div>
+
+    <div class="settings-section">
+      <h4>The 30-second version</h4>
+      <p style="font-size:13.5px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">A small community needs a few simple things:</p>
+      <ol style="font-size:13.5px;color:var(--cream-dim);line-height:1.85;margin-left:24px;margin-bottom:10px">
+        <li><strong style="color:var(--brass)">Know who's in the group.</strong> Add members (◉ tab).</li>
+        <li><strong style="color:var(--brass)">Track who's helped whom.</strong> Record exchanges in the ledger (⊞ tab). 1 credit ≈ 1 hour of contributed labour by default — your community can redefine it.</li>
+        <li><strong style="color:var(--brass)">Decide things together.</strong> Raise proposals (§ tab). Five voting methods baked in — fall-consensus is the default, see below.</li>
+        <li><strong style="color:var(--brass)">Coordinate the calendar.</strong> Workdays, harvests, meetings (▦ tab).</li>
+        <li><strong style="color:var(--brass)">Share tools.</strong> Anyone can list a tool or vehicle others can borrow (⚒ tab).</li>
+        <li><strong style="color:var(--brass)">Trade skills.</strong> Teach what you know, ask for what you need (☆ tab).</li>
+      </ol>
+      <p style="font-size:13.5px;color:var(--cream-dim);line-height:1.7">That's the whole tool. Open the laptop, do the thing, close the laptop, go outside.</p>
+    </div>
+
+    <div class="settings-section">
+      <h4>Fall Consensus · the 7-dim convergence method</h4>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">Most voting systems force everyone to a single yes/no. People with nuance get squeezed into a side they don't really hold. Decisions pass that nobody fully believes in.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px"><strong style="color:var(--brass)">Fall Consensus</strong> asks each member to position themselves on <strong>seven dimensions</strong>, not one. Together, those positions form your <em>bloom vector</em> — a 7-dimensional point describing how you stand toward this proposal.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0">
+        <thead><tr style="background:var(--void-2)">
+          <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase">Dimension</th>
+          <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase">The question</th>
+        </tr></thead>
+        <tbody>
+          ${FALL_DIMS.map(d => `<tr><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--brass);font-weight:600">${esc(d.l)}</td><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--cream-dim)">${esc(d.d)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">When you submit, the system computes the <strong style="color:var(--brass)">cosine similarity</strong> between your bloom vector and every other member's. The proposal converges — and can be locked in — when:</p>
+      <ul style="font-size:13px;color:var(--cream-dim);line-height:1.85;margin-left:24px;margin-bottom:10px;font-family:var(--mono)">
+        <li>avg similarity across all member pairs ≥ <strong style="color:var(--brass)">${FALL_THRESH.avgSim}%</strong></li>
+        <li>weakest pair similarity ≥ <strong style="color:var(--brass)">${FALL_THRESH.minPair}%</strong></li>
+        <li>variance across all dimensions ≤ <strong style="color:var(--brass)">${FALL_THRESH.maxVar}</strong></li>
+      </ul>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7">No central tally. No majority-overrules-minority. Nobody gets dragged. You move together or you keep talking.</p>
+    </div>
+
+    <div class="settings-section">
+      <h4>The other voting methods</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="background:var(--void-2)">
+          <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase">Method</th>
+          <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase">Passes when</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--brass);font-weight:600">consensus</td><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--cream-dim)">≥1 yes · 0 no · 0 blocks. One block stops it.</td></tr>
+          <tr><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--brass);font-weight:600">sociocracy</td><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--cream-dim)">≥1 yes · 0 blocks. No-votes are OK; blocks aren't. ("Good enough for now, safe enough to try.")</td></tr>
+          <tr><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--brass);font-weight:600">majority</td><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--cream-dim)">More yes than no votes.</td></tr>
+          <tr><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--brass);font-weight:600">unanimous</td><td style="padding:6px 10px;border-top:1px solid var(--line-soft);color:var(--cream-dim)">Every active member votes yes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="settings-section">
+      <h4>The ledger · mutual credit, in your own unit</h4>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">Every exchange is a transfer from one member to another, denominated in <strong style="color:var(--brass)">${unit()}</strong> (configurable in Settings). Both parties must confirm before the entry counts toward balances.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">No central bank. No fees. Balances can go negative within the community-set floor (default <strong style="color:var(--brass)">${state.meta.ledger_floor || -50} ${unit()}</strong>). The lowest balance someone can hold without community discussion.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7"><strong style="color:var(--brass)">Default peg:</strong> ${esc(state.meta.peg_definition)} — your community can redefine in Settings.</p>
+    </div>
+
+    <div class="settings-section">
+      <h4>Where your data lives</h4>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">All data sits in <strong style="color:var(--brass)">IndexedDB on this device</strong>. Open browser DevTools → Application → IndexedDB → <code style="font-family:var(--mono);background:var(--ink);padding:1px 4px;border-radius:2px">offgrid_db</code> to see it. Open Network tab and use the app: zero outbound requests.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:10px">For multi-device or multi-member sync, set a <strong style="color:var(--brass)">mesh URL</strong> in Settings — a small relay (Cloudflare Worker free tier, or your community Raspberry Pi). The relay forwards updates; it never holds data. If the relay goes down, every device still has the local copy. If we disappear, the HTML file you saved keeps working.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7"><strong style="color:var(--brass)">Backup ritual:</strong> Settings → Export → keep a JSON file somewhere safe (USB, second device, a printout if you're hardcore). One file = the entire community state. Re-importable into any install.</p>
+    </div>
+
+    <div class="settings-section">
+      <h4>Run it on a Raspberry Pi (community-on-a-shelf)</h4>
+      <pre style="font-family:var(--mono);font-size:11.5px;background:var(--ink);padding:14px 16px;border-radius:4px;color:var(--cream-dim);line-height:1.55;border:1px solid var(--line);overflow-x:auto">curl -O https://sjgant80-hub.github.io/offgridcommunitiessystem/index.html
+python3 -m http.server 8080 --bind 0.0.0.0
+# every member on your local network visits http://&lt;pi-ip&gt;:8080</pre>
+      <p style="font-size:12.5px;color:var(--cream-muted);line-height:1.7;margin-top:8px;font-family:var(--mono);letter-spacing:.04em">~80KB file · system fonts only · zero CDN dependencies · runs offline · runs on a school chromebook</p>
+    </div>
+
+    <div class="settings-section">
+      <h4>The tone</h4>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;font-style:italic">Practical. Dignified. Land-grounded. Not a hippy aesthetic. Not a tech-bro aesthetic. Closer to "1880s farmers' co-operative manual" meets "Linux man page". The tool should help you spend <em>less</em> time on the laptop, not more. The best signal it's working: a member closes the laptop and goes outside.</p>
+      <p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-top:10px"><strong style="color:var(--brass)">Star Trek × Hobbiton.</strong> Few hours online. Rest in the garden.</p>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// ONBOARDING modal · first load
+// ════════════════════════════════════════════════════════════════
+function showOnboarding() {
+  $('#modalBg').innerHTML = `<div class="modal" style="max-width:620px">
+    <span class="close" onclick="completeOnboarding()">×</span>
+    <h3 style="color:var(--brass)">Welcome to your community OS</h3>
+    <p style="font-size:13.5px;color:var(--cream-dim);line-height:1.7;margin-bottom:14px">No SaaS. No subscription. No account. Your data lives in this browser. Open Network tab in DevTools — nothing leaves.</p>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">In 90 seconds</div>
+    <ol style="font-size:13px;color:var(--cream-dim);line-height:1.85;margin-left:24px;margin-bottom:14px">
+      <li>Add yourself as a member (◉ tab) — tick <em>"this is me"</em> on your profile.</li>
+      <li>Add a few other members.</li>
+      <li>Record an exchange in the ledger (⊞ tab) — both parties confirm.</li>
+      <li>Raise a proposal (§ tab) using <strong style="color:var(--brass)">Fall Consensus</strong> — the 7-dim convergence method.</li>
+      <li>Tap the <strong>? Help</strong> tab any time for the full how-it-works.</li>
+    </ol>
+    <p style="font-size:12px;color:var(--cream-muted);line-height:1.6;margin-bottom:14px">Save the page to disk (right-click → Save As) and it runs offline forever. Settings → Export anytime to back up the whole community as one JSON.</p>
+    <div class="row-btns">
+      <button class="btn brass" onclick="completeOnboarding()">Got it. Let's go.</button>
+    </div>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+async function completeOnboarding() {
+  state.meta.onboarded = true; await saveMeta();
+  closeModal();
+}
+
+// ════════════════════════════════════════════════════════════════
 // Modal + helpers
 // ════════════════════════════════════════════════════════════════
 function closeModal() { $('#modalBg').classList.remove('open'); $('#modalBg').innerHTML = ''; }
@@ -1270,6 +1528,7 @@ function ymd(d) { return d.toISOString().slice(0, 10); }
     await openDB();
     await loadAll();
     render();
+    if (!state.meta.onboarded) setTimeout(showOnboarding, 400);
   } catch (e) {
     console.error('boot failed', e);
     document.body.innerHTML = '<div style="padding:40px;color:#ebe3d2;background:#1a1612;min-height:100vh;font-family:system-ui,sans-serif"><h1 style="color:#c08a3a;font-family:Georgia,serif">Off-Grid Community System could not start</h1><p>' + esc(e.message) + '</p><p>Try: Ctrl+Shift+Delete to clear site data, then reload.</p></div>';
