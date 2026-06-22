@@ -297,6 +297,21 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
   main.body { padding: 16px 14px 80px; }
   .settings-row { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* AI chip — ported from botler canonical pattern */
+.ai-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 3px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--ink); color: var(--cream-dim); user-select: none; }
+.ai-chip:hover { border-color: var(--brass); color: var(--cream); }
+.ai-chip.live { border-color: var(--leaf); color: var(--leaf); background: rgba(107,141,74,.10); }
+.ai-chip.loading { border-color: var(--amber); color: var(--amber); background: rgba(232,168,58,.10); }
+.ai-chip.warn { border-color: var(--rust); color: var(--rust); background: rgba(161,74,42,.08); }
+.ai-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.ai-chip.loading .dot { animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .3 } }
+
+.btn.ai-assist { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; font-size: 11px; border: 1px solid var(--brass); color: var(--brass); background: transparent; border-radius: 3px; margin-top: 5px; }
+.btn.ai-assist:hover { background: var(--brass); color: var(--void); }
+.btn.ai-assist:disabled { opacity: .4; cursor: not-allowed; border-color: var(--line); color: var(--cream-muted); }
+.btn.ai-assist::before { content: "✦"; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -324,6 +339,7 @@ main.body { overflow-y: auto; padding: 22px 28px 80px; max-width: 1280px; margin
       <button data-tab="help">? Help</button>
     </nav>
     <div class="top-actions">
+      <button class="ai-chip" id="aiChip" onclick="openAiPanel()" title="AI cascade · tier status"><span class="dot"></span><span id="aiChipText">T0</span></button>
       <button onclick="toggleTheme()" title="Toggle theme">☾</button>
     </div>
   </header>
@@ -400,6 +416,7 @@ const state = {
     peg_definition: '1 credit ≈ 1 hour of contributed labour',
     governance_default: 'fall-consensus',
   onboarded: false,
+  ai_tier: 'T0',  // T0 (none, default) · T2 (WebLLM in-browser) · T3 (BYOK API)
     ledger_floor: -50,
     mesh_url: null,
     theme: 'dark',
@@ -415,6 +432,137 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(t._to); t._to = setTimeout(() => t.className = 'toast', 2400); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function unit() { return state.meta.unit_label_short || 'credits'; }
+
+// ════════════════════════════════════════════════════════════════
+// AI CASCADE · ported verbatim from canonical `botler/index.html`
+// 3 tiers: T0 (no AI, always works) · T2 (WebLLM in-browser, ~2GB, sovereign) · T3 (BYOK API)
+// Single entry point: aiComplete(systemPrompt, userMsg, maxTokens)
+// T0 returns null → caller MUST fall back gracefully
+// ════════════════════════════════════════════════════════════════
+const WEBLLM_MODEL = 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
+const AI = { ready: false, loading: false, progress: 0, engine: null, model: null };
+function aiTier() { return state.meta.ai_tier || 'T0'; }
+function renderAiChip() {
+  const chip = document.getElementById('aiChip');
+  const txt = document.getElementById('aiChipText');
+  if (!chip || !txt) return;
+  chip.classList.remove('live', 'loading', 'warn');
+  const tier = aiTier();
+  if (tier === 'T0') { txt.textContent = 'T0 · off'; }
+  else if (tier === 'T2') {
+    if (AI.ready) { txt.textContent = 'T2 WebLLM · ready'; chip.classList.add('live'); }
+    else if (AI.loading) { txt.textContent = `T2 loading ${Math.round(AI.progress)}%`; chip.classList.add('loading'); }
+    else { txt.textContent = 'T2 · click to load'; chip.classList.add('warn'); }
+  } else if (tier === 'T3') {
+    if (state.meta.api_key) { txt.textContent = `T3 ${state.meta.api_provider || 'BYOK'}`; chip.classList.add('live'); }
+    else { txt.textContent = 'T3 · no key'; chip.classList.add('warn'); }
+  }
+}
+async function loadWebLLM() {
+  if (AI.loading || AI.ready) return;
+  AI.loading = true; AI.progress = 0; renderAiChip();
+  toast('Loading WebLLM · ~2GB first time', 'ok');
+  try {
+    const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm@0.2.79');
+    const engine = await CreateMLCEngine(WEBLLM_MODEL, {
+      initProgressCallback: p => { AI.progress = (p.progress || 0) * 100; renderAiChip(); }
+    });
+    AI.engine = engine; AI.model = WEBLLM_MODEL; AI.ready = true; AI.loading = false;
+    renderAiChip();
+    toast('WebLLM ready · sovereign mode', 'ok');
+  } catch (e) {
+    console.error('webllm load failed', e);
+    AI.loading = false; renderAiChip();
+    toast('WebLLM load failed · ' + e.message, 'err');
+  }
+}
+async function aiComplete(systemPrompt, userMsg, maxTokens = 600) {
+  const tier = aiTier();
+  if (tier === 'T2' && AI.ready && AI.engine) {
+    const r = await AI.engine.chat.completions.create({
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
+      max_tokens: maxTokens,
+    });
+    return r.choices[0].message.content;
+  }
+  if (tier === 'T3' && state.meta.api_key && state.meta.api_provider) {
+    return await aiCloudCall(systemPrompt, userMsg, maxTokens);
+  }
+  return null;  // T0 fallback — caller handles
+}
+async function aiCloudCall(sys, msg, maxTokens) {
+  if (state.meta.api_provider === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': state.meta.api_key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: maxTokens, system: sys, messages: [{ role: 'user', content: msg }] })
+    });
+    if (!r.ok) throw new Error('Anthropic ' + r.status);
+    const j = await r.json();
+    return j.content[0].text;
+  }
+  if (state.meta.api_provider === 'openai') {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Authorization': 'Bearer ' + state.meta.api_key },
+      body: JSON.stringify({ model: 'gpt-4o-mini', max_tokens: maxTokens, messages: [{ role: 'system', content: sys }, { role: 'user', content: msg }] })
+    });
+    if (!r.ok) throw new Error('OpenAI ' + r.status);
+    const j = await r.json();
+    return j.choices[0].message.content;
+  }
+  throw new Error('unknown provider: ' + state.meta.api_provider);
+}
+function openAiPanel() {
+  const tier = aiTier();
+  let body = `<p style="font-size:13.5px;color:var(--cream-dim);line-height:1.7">Current tier: <strong style="color:var(--brass);font-family:var(--mono)">${tier}</strong></p>`;
+  if (tier === 'T0') body += `<p style="font-size:13px;color:var(--cream-dim);line-height:1.7;margin-top:8px">T0 = no AI · the seed works fully without it. Upgrade to <strong>T2</strong> (WebLLM in-browser, ~2GB one-time download, sovereign, never leaves your device) or <strong>T3</strong> (BYOK Anthropic/OpenAI key, you pay, stored locally) from Settings.</p>`;
+  else if (tier === 'T2') {
+    if (AI.ready) body += `<p style="font-size:13px;color:var(--leaf);line-height:1.7">WebLLM ready · model: <code style="font-family:var(--mono);background:var(--ink);padding:1px 5px;border-radius:2px">${esc(AI.model)}</code></p><p style="font-size:12.5px;color:var(--cream-muted);line-height:1.6;margin-top:8px">All AI inference runs in your browser. Open DevTools Network — nothing leaves the device.</p>`;
+    else if (AI.loading) body += `<p style="font-size:13px;color:var(--amber);line-height:1.7">Loading · ${Math.round(AI.progress)}%</p><p style="font-size:12.5px;color:var(--cream-muted);line-height:1.6;margin-top:8px">First load downloads ~2GB of model weights from the @mlc-ai/web-llm CDN. After that, runs offline forever.</p>`;
+    else body += `<p style="font-size:13px;color:var(--cream-dim);line-height:1.7">WebLLM is configured but not loaded yet. Click below to download the model (~2GB, one-time, then cached forever).</p>`;
+  } else if (tier === 'T3') {
+    if (state.meta.api_key) body += `<p style="font-size:13px;color:var(--leaf);line-height:1.7">T3 active · ${esc(state.meta.api_provider)} · key stays in your IndexedDB, never proxied.</p>`;
+    else body += `<p style="font-size:13px;color:var(--cream-dim);line-height:1.7">Set an API key in Settings to enable T3.</p>`;
+  }
+  let actionsHtml = `<button class="btn ghost" onclick="closeModal()">Close</button>`;
+  if (tier === 'T2' && !AI.ready && !AI.loading) actionsHtml = `<button class="btn brass" onclick="closeModal();loadWebLLM()">Load WebLLM (~2GB)</button>` + actionsHtml;
+  document.getElementById('modalBg').innerHTML = `<div class="modal"><span class="close" onclick="closeModal()">×</span><h3>AI cascade · 3 tiers</h3>${body}<div class="row-btns">${actionsHtml}</div></div>`;
+  document.getElementById('modalBg').classList.add('open');
+}
+
+// ─── AI-assist helpers (graceful T0 fallback per botler doctrine: NEVER hide a feature behind AI) ───
+async function aiDraftProposal(titleEl, bodyEl) {
+  const title = titleEl.value.trim();
+  if (!title) { toast('Add a title first — AI drafts a body from it', 'err'); return; }
+  if (aiTier() === 'T0') { openAiPanel(); return; }
+  bodyEl.disabled = true; bodyEl.placeholder = 'AI drafting…';
+  try {
+    const txt = await aiComplete(
+      'You are drafting a proposal body for an off-grid community deciding things together. Be concrete: context (1 sentence), what is being asked (specific action), who would do it, by when, why. Land-grounded tone. No SaaS-bro language. 80-150 words max.',
+      'Proposal title: ' + title,
+      400
+    );
+    if (txt) { bodyEl.value = txt; toast('AI draft inserted · edit before saving', 'ok'); }
+  } catch (e) { toast('AI failed: ' + e.message, 'err'); }
+  finally { bodyEl.disabled = false; bodyEl.placeholder = "What's the proposal? Context, what's being asked, who'd do it, by when. Be specific."; }
+}
+async function aiSuggestLedgerDesc(descEl) {
+  const cat = document.getElementById('lCat')?.value;
+  const amt = document.getElementById('lAmount')?.value;
+  if (aiTier() === 'T0') { openAiPanel(); return; }
+  const examples = { hours: 'e.g. "3 hours digging beds"', goods: 'e.g. "12 eggs"', service: 'e.g. "drove to market and back"', 'tool-loan': 'e.g. "borrowed the cordless drill for 2 days"', gift: 'e.g. "spare jam, no expectation"', adjustment: 'e.g. "rounding balance reset"' };
+  descEl.disabled = true; descEl.placeholder = 'AI suggesting…';
+  try {
+    const txt = await aiComplete(
+      'You suggest one concrete short description for a community-ledger exchange entry. 5-12 words. Land-grounded. No emojis. Just the description, no quotes.',
+      `Category: ${cat}. Amount: ${amt} ${unit()}. Example shape: ${examples[cat] || 'short, concrete'}.`,
+      40
+    );
+    if (txt) { descEl.value = txt.trim().replace(/^["'`]|["'`]$/g, ''); toast('AI suggestion inserted', 'ok'); }
+  } catch (e) { toast('AI failed: ' + e.message, 'err'); }
+  finally { descEl.disabled = false; descEl.placeholder = 'e.g. "3 hours digging beds", "12 eggs", "ride to market"'; }
+}
 
 // ─── FALL CONSENSUS helpers (ported from fallconsensus seed) ───
 function cosineSim(a, b) {
@@ -557,6 +705,7 @@ function render() {
     case 'help':       renderHelp(body); break;
     default: renderHome(body);
   }
+  renderAiChip();
 }
 $$('#tabBar button').forEach(b => b.addEventListener('click', () => goTab(b.dataset.tab)));
 
@@ -793,7 +942,9 @@ function openLedgerModal(id) {
         ${LEDGER_CATEGORIES.map(c => `<option value="${c}" ${l?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
       </select></div>
     </div>
-    <div class="row"><label>What for?</label><input type="text" id="lDesc" value="${esc(l?.description || '')}" placeholder='e.g. "3 hours digging beds", "12 eggs", "ride to market"'></div>
+    <div class="row"><label>What for?</label><input type="text" id="lDesc" value="${esc(l?.description || '')}" placeholder='e.g. "3 hours digging beds", "12 eggs", "ride to market"'>
+      <button type="button" class="btn ai-assist" onclick="aiSuggestLedgerDesc(document.getElementById('lDesc'))" title="AI suggests a short concrete description (T0 prompts you to enable a tier first)">suggest</button>
+    </div>
     <div class="row"><label>When</label><input type="datetime-local" id="lAt" value="${l?.at?.slice(0,16) || isoLocalNow()}"></div>
     <div class="row-btns">
       ${l ? `<button class="btn danger" onclick="confirmDelLedger('${l.id}')">Delete</button>` : ''}
@@ -987,7 +1138,9 @@ function openProposalModal(id) {
     <span class="close" onclick="closeModal()">×</span>
     <h3>${p ? 'Edit proposal' : 'New proposal'}</h3>
     <div class="row"><label>Title</label><input type="text" id="pTitle" value="${esc(p?.title || '')}" placeholder="Short, clear, action-oriented"></div>
-    <div class="row"><label>Body</label><textarea id="pBody" placeholder="What's the proposal? Context, what's being asked, who'd do it, by when. Be specific.">${esc(p?.body || '')}</textarea></div>
+    <div class="row"><label>Body</label><textarea id="pBody" placeholder="What's the proposal? Context, what's being asked, who'd do it, by when. Be specific.">${esc(p?.body || '')}</textarea>
+      <button type="button" class="btn ai-assist" onclick="aiDraftProposal(document.getElementById('pTitle'), document.getElementById('pBody'))" title="AI drafts a body from the title (T0 prompts you to enable a tier first)">draft from title</button>
+    </div>
     <div class="row-flex">
       <div class="row" style="flex:1"><label>Type</label><select id="pType">
         ${PROPOSAL_TYPES.map(t => `<option value="${t}" ${p?.type === t ? 'selected' : ''}>${t}</option>`).join('')}
@@ -1324,6 +1477,33 @@ function renderSettings(body) {
     </div>
 
     <div class="settings-section">
+      <h4>AI assist · 3 tiers · default off</h4>
+      <div class="settings-row"><label>Tier</label><div>
+        <select id="setAiTier" onchange="onAiTierChange()">
+          <option value="T0" ${state.meta.ai_tier === 'T0' ? 'selected' : ''}>T0 · off (default · the seed works fully without AI)</option>
+          <option value="T2" ${state.meta.ai_tier === 'T2' ? 'selected' : ''}>T2 · WebLLM in-browser (~2GB one-time download · sovereign · runs offline forever after)</option>
+          <option value="T3" ${state.meta.ai_tier === 'T3' ? 'selected' : ''}>T3 · BYOK Anthropic or OpenAI key (you pay · stored in IndexedDB · never proxied)</option>
+        </select>
+        <div class="hint">AI is opt-in. Proposal drafting and ledger description suggestions become available when enabled. The seed itself runs fully at T0.</div>
+      </div></div>
+      <div class="settings-row" id="setT3Row" style="display:${state.meta.ai_tier === 'T3' ? 'grid' : 'none'}"><label>BYOK provider</label><div>
+        <select id="setAiProvider">
+          <option value="anthropic" ${state.meta.api_provider === 'anthropic' ? 'selected' : ''}>Anthropic (claude-sonnet-4-5)</option>
+          <option value="openai" ${state.meta.api_provider === 'openai' ? 'selected' : ''}>OpenAI (gpt-4o-mini)</option>
+        </select>
+      </div></div>
+      <div class="settings-row" id="setT3KeyRow" style="display:${state.meta.ai_tier === 'T3' ? 'grid' : 'none'}"><label>API key</label><div>
+        <input type="password" id="setAiKey" value="${esc(state.meta.api_key || '')}" placeholder="${state.meta.api_key ? '(unchanged — leave empty to keep)' : 'sk-ant-... or sk-...'}" autocomplete="off">
+        <div class="hint">Stored only in your browser's IndexedDB. Sent direct to the provider — never to us. Wipe via Reset workspace.</div>
+      </div></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn brass" onclick="saveAiSettings()">Save AI settings</button>
+        ${state.meta.ai_tier === 'T2' ? `<button class="btn ${AI.ready ? 'leaf' : 'brass'}" onclick="loadWebLLM()" ${AI.ready || AI.loading ? 'disabled' : ''}>${AI.ready ? '✓ WebLLM loaded' : AI.loading ? `loading ${Math.round(AI.progress)}%` : 'Load WebLLM (~2GB)'}</button>` : ''}
+        <button class="btn ghost" onclick="openAiPanel()">Tier status</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h4>Backup & data</h4>
       <div class="settings-row"><label>Records</label><div style="font-family:var(--mono);font-size:11px;color:var(--cream-muted);letter-spacing:.04em">${state.members.size} members · ${state.ledger.size} ledger entries · ${state.proposals.size} proposals · ${state.events.size} events · ${state.resources.size} resources · ${state.skills.size} skill offers · ${total} records total</div></div>
       <div class="settings-row"><label>Export whole community</label><div><button class="btn brass" onclick="exportAll()">⤓ Download JSON backup</button><div class="hint">One file containing everything. Re-importable into any install of this seed.</div></div></div>
@@ -1340,6 +1520,20 @@ function renderSettings(body) {
       </div>
     </div>
   `;
+}
+function onAiTierChange() {
+  const t = document.getElementById('setAiTier').value;
+  document.getElementById('setT3Row').style.display = t === 'T3' ? 'grid' : 'none';
+  document.getElementById('setT3KeyRow').style.display = t === 'T3' ? 'grid' : 'none';
+}
+async function saveAiSettings() {
+  state.meta.ai_tier = document.getElementById('setAiTier').value;
+  const newKey = document.getElementById('setAiKey').value;
+  if (newKey) state.meta.api_key = newKey;
+  state.meta.api_provider = document.getElementById('setAiProvider').value;
+  await saveMeta();
+  toast('AI settings saved', 'ok');
+  render();
 }
 async function saveSettingsFromModal() {
   state.meta.name = $('#setName').value.trim() || 'Your Community';
